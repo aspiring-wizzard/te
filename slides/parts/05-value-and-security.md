@@ -24,7 +24,7 @@ layout: two-cols-header
 | At build or admission | a rebuild |
 | In production | rotation · IR · customer comms |
 
-A gate that **blocks** gets routed around. A gate that **answers** gets adopted. {.punch}
+A gate that blocks **without answering** gets routed around. {.punch}
 
 <!--
 The asymmetry IS the argument — no invented figures needed, and none are used
@@ -53,7 +53,7 @@ This is not an outage you roll back. {.lede}
 
 - Backup bucket: `allUsers` **read + list**
 - No exploit. No credential. No login.
-- GDPR Art. 33 clock — not a backlog item
+- GDPR Art. 33 — a 72-hour notification decision
 - Privilege concentrated in **two identities**
 
 ::right::
@@ -62,7 +62,7 @@ This is not an outage you roll back. {.lede}
 
 - Five tools. Five lists. Five scales.
 - **None knows the others exist**
-- Analyst-weeks on findings nobody can reach
+- Triage spent on findings nobody can reach
 
 Mongo requires auth and is firewalled to the GKE ranges · nodes are private · no credentials in the repo {.aside}
 
@@ -73,11 +73,17 @@ supports it: user data leaving is not recoverable by rolling back a deploy.
 The bucket is the sharpest version — same data as the database, a different
 control set, and a quieter owner. Enumerate and download; no exploit needed.
 
-Regulation, if it comes up: under GDPR that bucket is a personal-data breach
-with a statutory notification clock attached, not a ticket. DORA and NIS2 add
-ICT-risk, supply-chain and incident-reporting duties, with management bodies
-accountable for the measures. An SBOM stops being paperwork the moment someone
-has to answer "which of our systems contained that library".
+Regulation, if it comes up — and be precise, because the imprecise version is
+easy to pick apart. Art. 33 is not an automatic 72-hour notification: it is a
+72-hour clock on a DECISION. The controller must assess whether the breach is
+likely to result in a risk to the rights and freedoms of data subjects, notify
+the supervisory authority if it is, and document the reasoning if it is not.
+Either way it is a decision somebody has to make, with a deadline — which is the
+actual point, and it is not something you put in a backlog.
+
+DORA and NIS2 add ICT-risk, supply-chain and incident-reporting duties, with
+management bodies accountable for the measures. An SBOM stops being paperwork
+the moment someone has to answer "which of our systems contained that library".
 
 Blast radius is a commercial measure: how much of the business one bad afternoon
 can reach.

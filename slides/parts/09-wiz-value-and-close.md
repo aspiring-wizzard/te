@@ -45,11 +45,17 @@ layout: default
 - **Agentless** — nothing installed on a host I already do not trust
 - **Code to cloud** — the fix ships as a **pull request against the IaC**
 
-Checkov hands me fifty findings in CVSS order.
+Checkov hands me 32 findings, unordered.
 
 Wiz hands me the one path — and the PR that closes it. {.punch}
 
 <!--
+The 32 is real, not illustrative — it is the failed-check count Checkov reports
+against terraform/ in CI (56 passed, 32 failed, 0 skipped). Say so if asked, and
+say that it will drift as the code changes. "Unordered" is the load-bearing
+word, not the number: Checkov has no way to rank them, because ranking needs
+reachability and identity, which it cannot see.
+
 The code-to-cloud point lands hardest in exactly this environment, because it is
 IaC-managed: the running container traces back to FROM node:16-bullseye in
 app/Dockerfile; the public bucket to google_storage_bucket_iam_member.public_read

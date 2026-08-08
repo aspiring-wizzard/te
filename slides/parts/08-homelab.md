@@ -6,7 +6,7 @@ layout: default
 
 I maintain the pipeline I would be asking developers to adopt. {.lede}
 
-- **Version bumps, every day** — one issue per stale pin, auto-assessed, most auto-merged
+- **Version bumps, every day** — one issue per stale pin, auto-assessed, low-risk ones merged automatically
 - **CI/CD, SBOMs, drift detection** — built, running, and mine to keep running
 - **First-party code in there too** — Go services, Python tooling, their own dependency trees
 - It is **tedious**. Genuinely, daily, grindingly tedious.
