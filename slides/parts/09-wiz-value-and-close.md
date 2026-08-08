@@ -116,11 +116,11 @@ Agentless disk scanning closes the first. A runtime sensor closes the second. {.
 
 - and that's two different fixes: no VM SBOM        → agentless disk scanning config ≠ behaviour → a runtime sensor ("the vulnerable pod actually spawned a shell and hit 169.254.169.254" — that's the difference between an attack path and an incident)
 
-- last line: I've shown Gatekeeper REJECT a pod. I have never made the detective control fire. that's the first thing I'd add with more lab time.
+- last line: both preventative controls reject live (Gatekeeper on the pod, Binary Auth on the image), and the detective control fires when a bucket is made public. what I haven't done is walk the WHOLE chain end-to-end in one sitting and watch it all light up together — that's the first thing I'd add with more lab time.
 
 #### If asked
 
-- **what would the simulation look like?** — *SSH in from the internet → download the backup anonymously → use the pod token to read Secrets → use the VM token to list instances → then watch the log-based alert fire and the calls land in Cloud Audit Logs.*
+- **what would the simulation look like?** — *grant a bucket public access → the detective alert fires in real time; run the exploit → the pod-token Secret reads and the VM-token API calls all land in Cloud Audit Logs. The one thing that does NOT show is the anonymous download itself — GCS doesn't log allUsers reads at all, which is exactly why the detective control watches the IAM change that opens the bucket, not the read.*
 - **anything else still open?** — *the generated password resolves into Terraform state. That's why state is versioned, IAM-restricted and public-access-enforced. The real fix is it never passing through Terraform at all.*
 -->
 

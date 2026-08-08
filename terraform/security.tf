@@ -21,17 +21,35 @@ resource "google_project_iam_audit_config" "all_services" {
 }
 
 # ---------------------------------------------------------------------------
-# ✅ DETECTIVE — log-based metric + alert on public access to the backup bucket.
-# This IS the detective control here, not a fallback: the sandbox is project-scoped
-# and `securitycenter.findings.list` is denied at the organisation, so Security
-# Command Center cannot be used. Project-scoped logging and alerting can.
+# ✅ DETECTIVE — log-based metric + alert on a bucket being MADE PUBLIC.
+#
+# This IS the detective control, and the signal it watches is deliberate.
+#
+# The obvious thing to alert on is the anonymous READ — someone downloading the
+# backup. You cannot, natively: Cloud Audit Logs do NOT record allUsers /
+# allAuthenticatedUsers access. Verified empirically — an anonymous object GET
+# returns 200 and produces zero data-access log entries. Anonymous reads only
+# appear in the legacy hourly-batched bucket usage logs, which are neither
+# real-time nor demoable. That blind spot is itself a sharp cloud-security point.
+#
+# So detect the CAUSE, not the symptom: the IAM change that grants allUsers.
+# `storage.setIamPermissions` is an Admin Activity event, which is always on and
+# cannot be disabled — so this fires the moment ANY bucket in the project is made
+# public, in real time, before a single byte is exfiltrated. Catching the door
+# being unlocked beats hoping to see someone walk through it.
+#
+# (Security Command Center is the org-native tool for this; it is denied in this
+# project-scoped sandbox — securitycenter.findings.list returns PERMISSION_DENIED
+# — so this project-scoped log-based control is the in-scope equivalent.)
 # ---------------------------------------------------------------------------
-resource "google_logging_metric" "public_bucket_access" {
-  name   = "${var.prefix}-public-bucket-access"
+resource "google_logging_metric" "bucket_made_public" {
+  name   = "${var.prefix}-bucket-made-public"
   filter = <<-EOT
+    logName="projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity"
     resource.type="gcs_bucket"
-    resource.labels.bucket_name="${google_storage_bucket.backups.name}"
-    protoPayload.authenticationInfo.principalEmail=""
+    protoPayload.methodName="storage.setIamPermissions"
+    protoPayload.serviceData.policyDelta.bindingDeltas.action="ADD"
+    (protoPayload.serviceData.policyDelta.bindingDeltas.member="allUsers" OR protoPayload.serviceData.policyDelta.bindingDeltas.member="allAuthenticatedUsers")
   EOT
 
   metric_descriptor {
@@ -41,15 +59,15 @@ resource "google_logging_metric" "public_bucket_access" {
   }
 }
 
-resource "google_monitoring_alert_policy" "public_bucket_access" {
-  display_name = "${var.prefix} — anonymous access to backup bucket"
+resource "google_monitoring_alert_policy" "bucket_made_public" {
+  display_name = "${var.prefix} — a Cloud Storage bucket was made public"
   combiner     = "OR"
 
   conditions {
-    display_name = "Anonymous read on backup bucket"
+    display_name = "allUsers/allAuthenticatedUsers granted on a bucket"
 
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.public_bucket_access.name}\" AND resource.type=\"gcs_bucket\""
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.bucket_made_public.name}\" AND resource.type=\"gcs_bucket\""
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "0s"
@@ -62,7 +80,7 @@ resource "google_monitoring_alert_policy" "public_bucket_access" {
   }
 
   documentation {
-    content = "Anonymous (unauthenticated) access to the MongoDB backup bucket. Expected during the exercise demo; in production this is data exfiltration."
+    content = "A Cloud Storage bucket was granted anonymous (allUsers/allAuthenticatedUsers) access. This is the misconfiguration that makes the backup exfiltration possible — expected once during the exercise (the backup bucket), a data-exposure incident in production. Native anonymous READS are not logged by Cloud Audit Logs, so this alerts on the IAM change that opens the door."
   }
 }
 

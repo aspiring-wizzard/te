@@ -40,20 +40,28 @@ were in scope, and they cover the same ground at the layers that matter here."*
 
 ### 1 · Control-plane audit logging  *(must)*
 
-**Show:** IAM → Audit Logs config (Data Access enabled on *All services*), then
-Logs Explorer with the anonymous bucket read already captured.
+**Show:** IAM → Audit Logs config — Admin read / Data read / Data write all
+**Enabled**, 0 exempted principals. (The yellow banner about
+`resourcemanager.organizations.getIamPolicy` is expected and harmless — it only
+means the console can't read the *org*'s inherited config in this project-scoped
+sandbox. Your project config is fully visible and on. This page is the *config*,
+not the logs — the logs are in Logs Explorer.)
 
-**Command** — surface the anonymous read in the audit log:
+**Command** — prove control-plane operations are being recorded (this returns
+real entries: cluster changes, IAM grants, the bucket being made public):
 ```bash
 gcloud logging read \
-  'resource.type="gcs_bucket" AND protoPayload.authenticationInfo.principalEmail=""' \
-  --project=clgcporg10-152 --limit=3 --freshness=1d --format=json
+  'logName="projects/clgcporg10-152/logs/cloudaudit.googleapis.com%2Factivity"' \
+  --project=clgcporg10-152 --limit=5 --freshness=1d \
+  --format='value(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)'
 ```
 
-**Talking point:** *"Admin Activity logging is on by default — that's the control
-plane. What I added is Data Access logging, because that's what makes a read of
-the backup bucket visible at all. Without it, the exfiltration leaves no trace.
-This is the substrate the detective control is built on."*
+**Talking point:** *"Admin Activity logging is always on — that's every
+control-plane operation, and it can't be disabled. I added Data Access logging
+on top, for reads and writes. One thing worth being honest about, because it's a
+genuine cloud blind spot: Data Access logs do not capture anonymous access — an
+allUsers read of the public bucket leaves no audit trail at all. That shapes the
+detective control, which is the next thing I'll show you."*
 
 ### 2 · Native misconfiguration detection — GKE Security Posture  *(role-gated 'native tooling')*
 
@@ -76,24 +84,32 @@ code-to-cloud continuity in one screen: the same finding, caught twice."*
 > Check the dashboard the morning of the panel — findings can take time to
 > populate after a cluster change, and you want to point at real ones.
 
-### 3 · Detective cloud control — the anonymous-access alert  *(should)*
+### 3 · Detective cloud control — alert when a bucket is made public  *(should)*
 
-**Show:** the log-based metric `wizex-public-bucket-access` and the alert policy
-"anonymous access to backup bucket".
+**Show:** the log-based metric `wizex-bucket-made-public` and the alert policy
+"a Cloud Storage bucket was made public", then the triggering event in the log.
 
-**Command** — fire it, then show the metric tick:
+**Log link (the event that opened the door):**
+https://console.cloud.google.com/logs/query;query=logName%3D%22projects%2Fclgcporg10-152%2Flogs%2Fcloudaudit.googleapis.com%252Factivity%22%0Aresource.type%3D%22gcs_bucket%22%0AprotoPayload.methodName%3D%22storage.setIamPermissions%22%0AprotoPayload.serviceData.policyDelta.bindingDeltas.member%3D%22allUsers%22;duration=P30D?project=clgcporg10-152
+
+**Command** — fire it live, then remove the test grant (the real `allUsers`
+weakness stays):
 ```bash
-# trigger: anonymous download, no credentials (this is finding #4)
-curl -s "https://storage.googleapis.com/storage/v1/b/wizex-backups-clgcporg10-152/o" | head
-# then watch the metric increment in Logs → Metrics, or the alert condition go active
+BK=wizex-backups-clgcporg10-152
+gsutil iam ch  allAuthenticatedUsers:objectViewer gs://$BK   # → metric ticks, alert fires within ~1 min
+gsutil iam ch -d allAuthenticatedUsers:objectViewer gs://$BK # → clean up (allUsers weakness untouched)
 ```
 
-**Talking point:** *"The detective control is specific: it fires on
-`principalEmail=""` — an unauthenticated read of the backup bucket. During this
-demo that's expected. In production it's data exfiltration, and it's the
-difference between finding out in minutes and finding out from a headline. Note
-what it can and can't do: it tells me the access happened; it can't prevent it.
-That's why it's paired with a preventative control."*
+**Talking point — and lead with the nuance, it's the strong part:** *"The
+obvious thing to alert on is the anonymous download itself. You can't, natively —
+and that surprised me until I tested it: Cloud Audit Logs do not record allUsers
+access at all. An anonymous GET returns 200 and leaves zero audit trail. So I
+detect the cause instead of the symptom: the IAM change that grants public
+access. That's an Admin Activity event — always on, can't be disabled — so it
+fires the moment any bucket in the project is made public, in real time, before
+a byte is exfiltrated. Catching the door being unlocked beats hoping to see
+someone walk through it. It's also honestly a better control: it fires once, at
+the misconfiguration, not on every read."*
 
 ### 4 · Preventative cloud control — Binary Authorization  *(must — the native one)*
 

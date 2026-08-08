@@ -175,6 +175,41 @@ Paired with `just k8s-secret`, which re-derives the Kubernetes Secret **from Sec
 
 **Cost note:** neither control adds a pod. Security Posture and Binary Authorization are control-plane features, so unlike Gatekeeper (D17) they add no CPU pressure to the cost-capped nodes.
 
+## D19 — The detective control watches the misconfiguration, not the read
+
+**Decision:** the log-based alert fires on a bucket being **granted public access**
+(`storage.setIamPermissions` adding `allUsers`/`allAuthenticatedUsers`), not on
+an anonymous read of it.
+
+**Forced by a blind spot I found by testing, not by reading docs.** The original
+control filtered Data Access logs for `principalEmail=""` — an anonymous read of
+the backup bucket. It looked right and it can never fire: **Cloud Audit Logs do
+not record `allUsers` access.** Verified empirically — an anonymous object GET
+returns `200` and produces **zero** data-access log entries, while my own
+authenticated calls to the same bucket log fine. Anonymous reads surface only in
+the legacy, hourly-batched bucket *usage* logs, which are neither real-time nor
+worth demoing. A filter for an event the platform never emits is a control that
+exists on paper and not in fact — the same shape as the inert Gatekeeper
+manifest (D17), caught the same way: by checking whether it actually fires.
+
+**The fix is also the better control.** `storage.setIamPermissions` is an **Admin
+Activity** event — always on, cannot be disabled — so alerting on the public-grant
+fires the moment *any* bucket in the project is made public, in real time, before
+a byte leaves. Detecting the door being unlocked beats hoping to catch someone
+walking through it, and it fires **once at the misconfiguration** rather than on
+every read.
+
+**The blind spot is itself a talking point, not just a workaround.** "Cloud Audit
+Logs don't see anonymous access" is a sharp, non-obvious fact about GCS — the kind
+of gap a CNAPP with its own data plane exists to cover. Naming it is stronger than
+quietly routing around it.
+
+**Verified:** the corrected filter matches both the historical grant (when
+Terraform made the bucket public) and a fresh test grant; the metric ticks and the
+alert condition trips within ~a minute. Repeatable demo trigger:
+`gsutil iam ch allAuthenticatedUsers:objectViewer gs://<bucket>`, then `-d` to
+remove it — the intentional `allUsers` weakness is left untouched.
+
 ## D12 — Control-plane allowlist: a /32 plus the ISP range
 **Decision:** `admin_cidr` stays the precise current `/32`; `extra_admin_cidrs` adds the ISP's `/16` as an explicit fallback. *(Actual addresses are redacted here — this is a residential connection, and the repository is public.)*
 
