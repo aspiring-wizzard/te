@@ -44,7 +44,7 @@ jobs:
       # permission you only exercise in one visibility mode.
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history
 
@@ -86,7 +86,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Fetch application source
         run: git clone --depth 1 --branch "$NODEGOAT_REF" https://github.com/OWASP/NodeGoat.git /tmp/app
@@ -129,7 +129,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Fetch application source
         run: git clone --depth 1 --branch "$NODEGOAT_REF" https://github.com/OWASP/NodeGoat.git app-src
@@ -204,7 +204,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Soft by design, like the other scanners in this knowingly-vulnerable
       # lab: all three pins ARE deliberately end-of-life, so failing the build

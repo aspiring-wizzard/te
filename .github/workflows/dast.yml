@@ -27,7 +27,7 @@ jobs:
       contents: read
       issues: write # ZAP action files findings as an issue
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Baseline = passive spider + passive rules. Deliberately NOT the full
       # active scan: this is a deliberately vulnerable app and an active scan
