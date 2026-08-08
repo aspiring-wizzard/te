@@ -24,14 +24,23 @@ Three lists. Three scales. {.punch}
 - That the bucket needs **no exploit at all**
 
 <!--
-Every finding on the left is real and already caught. The right-hand column is
-not a tooling gap — it is a MODEL gap. No scanner here holds identity,
-reachability and RBAC in one place, so none of them can express a path.
+— everything on the left is real, and already caught today. no gaps there.
 
-Snyk on the application side would give me a better flat list. Still flat. SCC
-would be a fourth console reporting the same misconfigurations again.
+— the right column is not a tooling gap. it's a MODEL gap.
+  no scanner here holds identity + reachability + RBAC in one place,
+  so none of them can express a PATH — only a list
 
-Do not rush this slide. It is the setup; the next one is the payoff.
+— and buying more scanners doesn't fix it:
+  Snyk on the app side = a better flat list. still flat.
+  SCC = a fourth console reporting the same misconfigurations again
+
+— slow down here. this is the setup; the next slide is the payoff.
+
+── IF ASKED ──
+couldn't you correlate these yourself?
+  → I did — that's the attack-path slide. It took me knowing the environment
+    intimately and going looking. That doesn't scale to an estate I didn't
+    build, and it doesn't survive me leaving.
 -->
 
 ---
@@ -50,22 +59,42 @@ Checkov hands me 32 findings, unordered.
 Wiz hands me the one path — and the PR that closes it. {.punch}
 
 <!--
-The 32 is real, not illustrative — it is the failed-check count Checkov reports
-against terraform/ in CI (56 passed, 32 failed, 0 skipped). Say so if asked, and
-say that it will drift as the code changes. "Unordered" is the load-bearing
-word, not the number: Checkov has no way to rank them, because ranking needs
-reachability and identity, which it cannot see.
+So what would actually change here.
 
-The code-to-cloud point lands hardest in exactly this environment, because it is
-IaC-managed: the running container traces back to FROM node:16-bullseye in
-app/Dockerfile; the public bucket to google_storage_bucket_iam_member.public_read
-in terraform/bucket.tf. Fix it in the console and the next tofu apply puts it
-back. The fix has to land in the repository or it is not a fix.
+Not the findings. I have the findings. What I don't have is the edges between
+them — and that's what the graph is: cloud resources, identities, network
+exposure, Kubernetes RBAC and the repository, all in one model. The chain I
+walked you through earlier stops being something I had to be clever enough to
+spot, and becomes a query result.
 
-Two honest caveats if pushed: prioritisation holds because the graph knows
-reachability and identity, not because it has a better CVE feed. And this is the
-narrative built on real artefacts — I am describing the edges Wiz would draw
-over this project, not replaying a tenant I have used.
+That's the difference I'd want to land. Checkov gives me thirty-two findings
+against this Terraform and no way to rank them — because ranking needs
+reachability and identity, and Checkov can see neither. Wiz gives me the one
+path that actually matters.
+
+The agentless part matters more than it sounds. That Mongo VM is a host I
+already don't trust. Snapshot scanning means I inventory it without installing
+anything on it — and it's also the answer to the gap I showed you two slides
+ago, where the VM had no SBOM at all.
+
+And then code-to-cloud, which lands hardest in exactly this environment because
+everything here is IaC-managed. The running container traces back to a line in
+app/Dockerfile. The public bucket traces back to a resource in
+terraform/bucket.tf. So the fix ships as a pull request against the
+infrastructure code — which matters, because if you fix this in the console,
+the next apply puts it straight back.
+
+── IF ASKED ──
+where does the 32 come from?
+  → Checkov's actual output in CI against terraform/ — 56 passed, 32 failed.
+    It'll drift as the code changes. The number isn't the point; "unordered" is.
+have you used Wiz in production?
+  → No, and I won't pretend otherwise. This is the narrative built on real
+    artefacts — I'm describing the edges Wiz would draw over this specific
+    project, not replaying a tenant I've operated.
+is this just better prioritisation?
+  → It holds because the graph knows reachability and identity, not because it
+    has a better CVE feed. That distinction is the whole thing.
 -->
 
 ---
@@ -93,23 +122,33 @@ layout: two-cols-header
 Agentless disk scanning closes the first. A runtime sensor closes the second. {.punch}
 
 <!--
-Tone: these are trade-offs made knowingly, not things I missed.
+— left column: things I traded away knowingly, not things I missed
+  Pulumi lost to HCL's scanning ecosystem — I'd revisit that the day a
+  pipeline standardises on policy-as-code
 
-The runtime point is the honest limit of the entire exercise, and it is also
-precisely the Wiz Defend argument — configuration state versus workload
-behaviour. A runtime sensor is what tells me the vulnerable pod actually spawned
-a shell and reached 169.254.169.254. That is the difference between an attack
-path and an incident.
+— right column is the honest limit of the whole exercise:
+  everything I built reasons about CONFIGURATION
+  it can tell you the path is exploitable
+  it cannot tell you it IS being exploited
 
-The thing I would add first with more lab time: walk the whole path end to end —
-SSH in, download the backup anonymously, use the pod token to read Secrets, use
-the VM token to list instances — and watch the log-based alert fire. I have
-demonstrated Gatekeeper rejecting a pod. I have not proved the detective control
-by making it fire.
+— and that's two different fixes:
+  no VM SBOM        → agentless disk scanning
+  config ≠ behaviour → a runtime sensor
+  ("the vulnerable pod actually spawned a shell and hit 169.254.169.254" —
+   that's the difference between an attack path and an incident)
 
-On state, if it comes up: the generated password still resolves into Terraform
-state, which is why state is versioned, IAM-restricted and public-access-
-enforced. The real fix is it never passing through Terraform at all.
+— last line: I've shown Gatekeeper REJECT a pod. I have never made the
+  detective control fire. that's the first thing I'd add with more lab time.
+
+── IF ASKED ──
+what would the simulation look like?
+  → SSH in from the internet → download the backup anonymously → use the pod
+    token to read Secrets → use the VM token to list instances → then watch
+    the log-based alert fire and the calls land in Cloud Audit Logs.
+anything else still open?
+  → the generated password resolves into Terraform state. That's why state is
+    versioned, IAM-restricted and public-access-enforced. The real fix is it
+    never passing through Terraform at all.
 -->
 
 ---

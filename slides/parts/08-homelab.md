@@ -14,28 +14,45 @@ I maintain the pipeline I would be asking developers to adopt. {.lede}
 No SAST. No dependency gate. No secret scanning. {.punch}
 
 <!--
-This is the slide that says I am not describing developer pain from the outside.
+I want to step outside the exercise for a minute, because I think this matters
+more than anything else I've shown you.
 
-The point is not that I have a homelab. It is that I own the maintenance burden
-of exactly the automation I would be asking a customer's teams to adopt — so
-when I say "this belongs in the pull request", I know precisely what I am adding
-to somebody's Tuesday. Every gate I propose is a gate I have had to live with.
+I run a self-hosted estate at home. All of it is code, all of it deploys
+through CI. Part of that is version automation: every day it checks every
+pinned dependency, opens an issue for each one that's gone stale, drafts an
+upgrade assessment, and auto-merges the ones it can classify as low risk.
 
-Then the honest half — and say the third bullet deliberately, because it closes
-the obvious escape route. The easy dismissal is "it is an infrastructure repo,
-there is no application to scan". That is not true: there are self-written
-services in there — Go plumbing around Matrix, Python tooling for the version
-and triage automation — with real dependency trees of their own. So the gap is
-not "nothing to scan". It is "something to scan, and I do not scan it".
+I built that, and I maintain it. And I'll be honest about what that's like —
+it is tedious. Genuinely, daily, grindingly tedious.
 
-Not because I could not build it. Because AppSec is a separate discipline that
-does not fall out of infrastructure work — the same lesson as the pipeline that
-drifted cloud-ward, except that one I caught in a fortnight and this one has
-been true for years.
+Which is the point. When I sit with a platform team and say "this control
+belongs in the pull request", I know exactly what I'm adding to somebody's
+Tuesday. Every gate I'd propose is a gate I've had to live with myself.
 
-That is the gap Wiz Code closes, and it is why I believe the argument rather
-than just being able to make it. If a panel wants the version-bump detail: a
-daily job buckets every stale pin, drafts an upgrade assessment per source, and
-auto-merges only the ones a spec has classified as low risk. It works. It still
-tells me nothing about whether the code I am shipping is exploitable.
+Now the uncomfortable half. There is first-party code in there — Go services
+doing Matrix plumbing, Python tooling running the version and triage
+automation, each with a dependency tree of its own. So this isn't a case of
+there being nothing to scan.
+
+There's no SAST in it. No dependency gate. No secret scanning worth the name.
+
+Not because I couldn't build it. Because application security is a different
+discipline, and it does not fall out of infrastructure work. Which is the same
+lesson as the pipeline that drifted cloud-ward — except I caught that one in a
+fortnight, and this one has been true for years.
+
+That's the gap. And it's why I believe this argument rather than just being
+able to make it.
+
+── IF ASKED ──
+so why haven't you added SAST?
+  → honestly, the same reason your customers haven't. It's a separate thing to
+    stand up, own and tune, and there is always something with a deadline in
+    front of it. That is the adoption problem, and it's exactly why the gate
+    has to answer inside the pull request rather than being another console
+    somebody has to remember to open.
+what's in the estate?
+  → self-hosted git and CI, monitoring and alerting, backups with restore
+    drills, home automation. The version automation is the piece most relevant
+    here.
 -->

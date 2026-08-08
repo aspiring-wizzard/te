@@ -13,25 +13,23 @@ Four things went wrong. These are the three worth your time. {.lede}
 One was the app's. Two were mine. {.punch}
 
 <!--
-Say the last line plainly and do not soften it. The deck previously claimed all
-of these were "decisions", and that was retrospective tidying: two of them were
-mistakes.
+— four things went wrong. three are worth your time.
 
-The drift was mine — I built the wrong kind of security and only found it by
-going looking. Gatekeeper was mine — the manifest existed and the admission
-controller was never installed, which is not a trade-off, it is something I did
-not check. The EOL database is the one that genuinely was not a decision by
-anyone: it is a property of the application's dependency tree.
+— and I want to be exact about the last line, because it's easy to dress
+  these up as trade-offs and they weren't:
+    the drift was MINE — built the wrong kind of security
+    Gatekeeper was MINE — never checked the controller was installed
+    the EOL database was the APP's — nobody decided that
 
-A panel of engineers spots reframed mistakes instantly, and it would cost me the
-credibility the stories otherwise buy. These are not confessions either — they
-are the parts of the build where something was actually learned, and all three
-shapes will be familiar to anyone who has debugged a pipeline.
+— these aren't confessions. they're the parts where I actually learned
+  something, and all three shapes will be familiar to you.
 
-The fourth, if anyone asks: an arm64 image on amd64 nodes. It pulled perfectly
-and then would not execute — "exec format error" reads like a corrupt image
-rather than a wrong-architecture one. CI never would have caught it; CI runners
-are amd64. Only local builds were affected.
+── IF ASKED ──
+what was the fourth?
+  → arm64 image on amd64 nodes. it pulled perfectly and then wouldn't
+    execute — "exec format error", which reads like a corrupt image rather
+    than a wrong-architecture one. CI would never have caught it; the
+    runners are amd64. only local builds were affected.
 -->
 
 ---
@@ -51,16 +49,35 @@ It never once looked at the application source. {.punch}
 You secure the layer you are most fluent in. {.punch}
 
 <!--
-This is the correction I am most glad I made, and the one most worth telling an
-AppSec panel — because the failure is not laziness, it is fluency. I am strongest
-on infrastructure, so the pipeline I built by instinct secured infrastructure.
+This is the correction I'm most glad I made.
 
-The uncomfortable generalisation: AppSec coverage has to be DESIGNED. It does not
-fall out of a container scan, and it does not fall out of hiring good
-infrastructure people. That is a programme-design point, not a tooling point.
+My first pass at this pipeline was, I thought, thorough. Checkov and Trivy
+across the Terraform. Image scanning before the registry push. Findings going
+into code scanning. If you'd asked me at the time, I'd have told you I had a
+security pipeline.
 
-It is also the honest reason a CNAPP conversation lands with platform teams: they
-are not refusing to do AppSec, they are covering what they can see.
+Then I went looking for what it did not scan. The answer was the application.
+Not one job touched the source. No SAST, no dependency scanning at source, no
+secret scanning. I'd built a cloud-security pipeline and put an AppSec label
+on it.
+
+The part I find uncomfortable is why. It wasn't laziness, and it wasn't that I
+don't know what SAST is. It was fluency. I'm strongest on infrastructure, so
+the pipeline I built by instinct secured infrastructure. I covered what I could
+see.
+
+Which is why I don't think you get application security by hiring good platform
+people. It has to be designed on purpose, and somebody has to go looking for
+the gap deliberately.
+
+It's also the honest reason this conversation lands with platform teams. They
+are not refusing to do AppSec. They are covering what they can see.
+
+── IF ASKED ──
+how did you catch it?
+  → I went back through the exercise brief and asked which requirement each
+    job satisfied. Nothing mapped to the AppSec bonus. The gap was in what I
+    hadn't written, so no test was ever going to find it.
 -->
 
 ---
@@ -82,7 +99,8 @@ MongoError: Unsupported OP_QUERY command: find   (code 352)
 Patching cannot fix this. Only an application change can. {.punch}
 
 <!--
-[continues on the next slide — the second beat is that nothing caught it]
+— and hold that thought, because there's a second half to this one:
+  none of my scanners noticed any of it
 -->
 
 ---
@@ -100,48 +118,74 @@ Every scanner here reads the app image or the IaC config. The database is `apt-g
 It sees what is **declared**. Not what is **installed**. {.punch}
 
 <!--
-This is the honest half of the previous slide, and it is worth volunteering
-because it is the obvious question: surely that is trivial to catch?
+Now the part I should own, because it's the obvious question: surely that's
+trivial to catch?
 
-It is — once you notice. The reason it went unnoticed is structural, not lazy.
-Trivy scans the application container. Trivy fs scans the npm tree. Checkov
-reads Terraform for MISCONFIGURATION, and no rule says "this string is an
-unsupported version". ZAP is black-box HTTP. The CycloneDX SBOM stops at the
-container's edge — so the VM has no SBOM at all. Every tool was pointed at
-something real; none of them was pointed at the datastore.
+It is, once you notice. But look at where my scanners were pointed. Trivy
+scans the application container. Trivy fs scans the npm tree. Checkov reads
+Terraform for misconfiguration — and there's no Checkov rule that says "this
+string is an unsupported version". ZAP is black-box HTTP against the app. The
+SBOM I generate stops at the container's edge. Every one of those tools was
+pointed at something real. Not one of them was pointed at the database.
 
-The second point is the one I would defend hardest: EOL is a LIFECYCLE fact, not
-a vulnerability. A vulnerability feed can be entirely green on software that
-will never receive another fix. Catching it needs a lifecycle dataset —
-endoflife.date here — not a CVE database. Worth adding: mongodb-org comes from
-MongoDB's own apt repo rather than Ubuntu's security tracker, so CVE matching is
-weaker for it than for distro packages. The lifecycle signal is the more
-dependable one.
+The VM has no SBOM at all. That's the actual gap, and it's a shape I think is
+very common — the machine that predates the container platform, still running,
+still nobody's scanning surface.
 
-Then the limit, and it is the hand-off to agentless: the check reads pins out of
-source. It cannot see a package a startup script pulled in transitively, or
-drift between the pin and the running host. Closing that means an SBOM of the VM
-itself — disk scanning, no agent on a host I already do not trust.
+The other half is the one I'd defend hardest. End of life is a lifecycle fact,
+not a vulnerability. A CVE feed can come back completely green on software
+that will never receive another fix, because there's no vendor left to issue
+the advisory. So catching it needs a lifecycle dataset, not a vulnerability
+database. I wired mine to endoflife.date, and it flags all three: the
+database, the operating system, and the Node base image.
 
-Demo it live if there is time: `just demo-eol`.
+And then the limit, which matters more than the fix. It reads pins out of
+source code. It sees what I declared. It cannot see what a startup script
+actually pulled onto that host, and it cannot see drift between the two.
+Closing that needs an SBOM of the machine itself.
+
+── IF ASKED ──
+can I see it?
+  → yes — `just demo-eol`, takes about two seconds.
+why not just use Trivy on the VM?
+  → that's exactly the right instinct, and it's the honest next step. Trivy
+    can scan a disk image. I didn't get there. Also worth knowing: mongodb-org
+    comes from MongoDB's own apt repo rather than Ubuntu's security tracker,
+    so CVE matching is weaker for it than for distro packages — which is why
+    the lifecycle signal is the more dependable one here.
 -->
 
 <!--
-This is the best AppSec story in the build, because it inverts the usual framing.
-"Upgrade your database" is a platform ticket. Here the platform CANNOT act: the
-version is pinned by an application dependency nobody has touched since 2016.
+I put MongoDB 6.0 in first. The app connected to it perfectly, and then
+failed every single read and write.
 
-That is how legacy risk actually arrives — not by decision, by accretion. And it
-is why "just patch it" is not something a platform team can unilaterally execute.
+That error is the reason. NodeGoat ships a MongoDB driver from 2016, and that
+driver speaks a wire protocol called OP_QUERY. MongoDB removed OP_QUERY in
+5.1. So the newest database this application can talk to at all is 5.0 — and
+5.0 went end-of-life in October 2024.
 
-An AppSec problem wearing an infrastructure costume. If they push: the fix is
-upgrading the driver, which is an application change, with application testing
-and an application owner.
+So I'm running an unsupported datastore. Not because anyone decided to, and
+not because nobody got round to upgrading it. Because a dependency nobody has
+touched in nearly ten years pinned it there.
 
-Coupling detail if asked: MongoDB 5.0 publishes server packages for focal only —
-the jammy suite exists and returns HTTP 200 but ships just the shell and tools.
-A reachable repository is not a supported one. The OS choice was never
-independent of the app's dependency tree.
+That's the bit I'd want you to take from this. "Upgrade the database" sounds
+like a platform ticket, and here the platform genuinely cannot act. Patching
+does not fix this. The only fix is upgrading the application's driver — which
+is an application change, with application testing and an application owner.
+
+It's an AppSec problem wearing an infrastructure costume. And it's how legacy
+risk actually arrives: not by decision, by accretion.
+
+── IF ASKED ──
+why Ubuntu 20.04 rather than something newer?
+  → the OS choice wasn't independent either. MongoDB 5.0 only publishes
+    server packages for focal. The jammy suite exists and returns HTTP 200,
+    but ships just the shell and tools — a reachable repository isn't a
+    supported one. The app's dependency tree reached all the way down to the
+    operating system.
+couldn't you have used a different app?
+  → yes, and then the exercise demonstrates nothing. The constraint is the
+    finding.
 -->
 
 ---
@@ -159,20 +203,38 @@ The Gatekeeper manifest existed. Gatekeeper did not. {.lede}
 The security control evicted the workload it was there to protect. {.punch}
 
 <!--
-Two failures, and the second is the interesting one.
+This one is two failures, and the second is the interesting one.
 
-First: a policy manifest with no admission controller behind it is a document,
-not a control. I had treated the requirement as met because the FILE existed.
-That is the same failure mode as a policy-as-code repo with no webhook wired up,
-and it is a real and common finding.
+The first is straightforward and it was mine. I'd written the Gatekeeper
+constraint, committed it, and ticked the requirement off — because the file
+existed. Gatekeeper itself was never installed. So if I'd run this demo as
+planned, I'd have applied a privileged pod in front of you and watched it be
+admitted. The control would have proven the exact opposite of its point.
 
-Second: Gatekeeper ships HA defaults — three controller replicas plus audit,
-about 400m CPU and 2Gi. On a cluster sized down to a $200 sandbox cap that was
-enough to evict NodeGoat.
+A policy manifest with no admission controller behind it is a document, not a
+control. That's the same failure mode as a policy-as-code repository with no
+webhook wired up, and it's a genuinely common finding.
 
-The generalisation is the useful part: controls are not free, and admission
-controllers land on the same nodes as the workload. "Turn on the policy engine"
-is a capacity decision as well as a security one — which is a large part of why
-security tooling gets disabled in the real world. In production you size the
-cluster for the controls; in a capped sandbox you right-size the control.
+Then I installed it, and the application went Pending. Gatekeeper ships
+high-availability defaults — three controller replicas plus audit, roughly
+400 millicores and two gigs. This cluster is two e2-mediums, sized down to a
+two-hundred-dollar sandbox cap. That was enough to push both nodes past ninety
+percent CPU requests and evict NodeGoat.
+
+So the security control evicted the workload it existed to protect.
+
+That's the part worth generalising. Controls are not free, and admission
+controllers land on the same nodes as the thing they're protecting. "Turn on
+the policy engine" is a capacity decision as much as a security one — and I
+think that's a large part of why security tooling gets quietly switched off in
+the real world. In production you size the cluster for the controls. In a
+capped sandbox, you right-size the control.
+
+── IF ASKED ──
+how did you fix it?
+  → scaled the controller to a single replica. Ample for one constraint, and
+    the recipe does it automatically now so a rebuild can't repeat it.
+why not just give the cluster more nodes?
+  → cost cap. And I'd rather the constraint stayed visible — it's the honest
+    version of a trade-off every platform team makes.
 -->

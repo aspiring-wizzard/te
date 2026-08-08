@@ -27,16 +27,22 @@ layout: two-cols-header
 A gate that blocks **without answering** gets routed around. {.punch}
 
 <!--
-The asymmetry IS the argument — no invented figures needed, and none are used
-anywhere in this deck.
+— the app IS the product. the data is the business.
+  everything else here exists to keep it available and keep it private.
 
-On the supply chain line: "what are we running, and what is inside it" becomes a
-query rather than an excavation. That is the difference between an afternoon and
-a fortnight when the next Log4Shell lands.
+— the table on the right is the whole economic argument, and it needs
+  no invented numbers:
+    pull request      → a review comment
+    build / admission → a rebuild, nobody outside sees it
+    production        → rotation, IR, customer comms, a notification decision
 
-On the last line: adoption is a design constraint, not a rollout problem. A gate
-developers route around — an exception, a bypass flag, a second pipeline — is a
-gate that has already failed, however good its findings are.
+— supply chain: an SBOM per build means "what are we running, and what's
+  inside it" is a QUERY, not an excavation
+  → afternoon vs. fortnight when the next Log4Shell lands
+
+— last line: adoption is a design constraint, not a rollout problem
+  a gate people route around — exception, bypass flag, second pipeline —
+  has already failed, however good its findings are
 -->
 
 ---
@@ -67,29 +73,35 @@ This is not an outage you roll back. {.lede}
 Mongo requires auth and is firewalled to the GKE ranges · nodes are private · no credentials in the repo {.aside}
 
 <!--
-"Disclosure, not downtime" is the line to land. Everything else on the slide
-supports it: user data leaving is not recoverable by rolling back a deploy.
+— this is the failure you don't roll back. you can redeploy an outage.
+  you can't un-disclose data.
 
-The bucket is the sharpest version — same data as the database, a different
-control set, and a quieter owner. Enumerate and download; no exploit needed.
+— the bucket is the sharpest version of it:
+  same data as the database, different control set, quieter owner
+  enumerate and download — no exploit, no credential, no login
 
-Regulation, if it comes up — and be precise, because the imprecise version is
-easy to pick apart. Art. 33 is not an automatic 72-hour notification: it is a
-72-hour clock on a DECISION. The controller must assess whether the breach is
-likely to result in a risk to the rights and freedoms of data subjects, notify
-the supervisory authority if it is, and document the reasoning if it is not.
-Either way it is a decision somebody has to make, with a deadline — which is the
-actual point, and it is not something you put in a backlog.
+— privilege sits in exactly two identities: one pod SA, one VM SA
+  compromise either and it's the whole cluster, or the whole project
+  blast radius is a COMMERCIAL measure — how much of the business
+  one bad afternoon reaches
 
-DORA and NIS2 add ICT-risk, supply-chain and incident-reporting duties, with
-management bodies accountable for the measures. An SBOM stops being paperwork
-the moment someone has to answer "which of our systems contained that library".
+— right side: five tools, five lists, five scales, none aware of the others
+  the cost isn't the findings. it's triage spent on things nobody can reach.
 
-Blast radius is a commercial measure: how much of the business one bad afternoon
-can reach.
+— read the grey line at the bottom out loud — otherwise this sounds like a
+  uniformly careless environment instead of five deliberate holes
 
-The aside matters — say it. Otherwise this reads as a uniformly careless
-environment rather than a deliberately weak one.
+── IF ASKED ──
+GDPR specifics?
+  → Art. 33 isn't automatic notification. it's a 72-hour clock on a DECISION:
+    assess whether it's likely to risk data subjects' rights and freedoms,
+    notify if yes, document the reasoning if no. either way somebody decides,
+    on a deadline.
+DORA / NIS2?
+  → ICT-risk management, third-party and supply-chain security, incident
+    reporting — with management bodies accountable for the measures.
+    an SBOM stops being paperwork the moment someone has to answer
+    "which of our systems contained that library".
 -->
 
 ---
@@ -119,20 +131,40 @@ flowchart LR
 Five routine tickets. Five different owners. One chain. {.punch}
 
 <!--
-Start at the LEFT of the graph and say it explicitly: the entry point is
-application code, not a firewall rule. The chain starts in the app.
+This is the slide everything else is built around, so I'll go slowly.
 
-Individually these are a role binding, a version pin, an IAM role, a bucket ACL
-and a firewall rule — plus "the app has findings", which every app has. Owned by
-application, platform, database, cloud and data teams respectively. Nothing here
-would page anyone.
+Start on the left, because this is the part I think people get backwards.
+The entry point is application code. Not a firewall rule, not a bucket — the
+app. That's what's internet-facing, and that's what has the flaws.
 
-Chained: one path from a line of application code to the cluster, the data AND
-the cloud control plane — with a second, credential-free route to the same data
-through the bucket.
+From there it's three steps. The pod's service account is bound to
+cluster-admin, so anything executing in that container can read every Secret
+in the cluster — including the Mongo credentials. Those credentials open a
+database running an end-of-life version. And that VM's own service account
+holds roles/editor, which is the cloud control plane.
 
-If asked which to fix first: the ordering only exists once you can see the path.
-That is the setup for the Wiz slide — do not pre-empt it here.
+There's a second route that needs none of that. The database backs itself up
+every night into a bucket that grants allUsers read and list. You enumerate
+it, and you download it.
+
+Now the part that matters. Individually, these are five routine tickets. A
+role binding. A version pin. An IAM role. A bucket ACL. A firewall rule. Plus
+"the application has findings", which every application has. Five different
+owners — app team, platform, database, cloud, data. Not one of them would page
+anybody at three in the morning.
+
+Chained, it's a single path from a line of application code to the cluster, to
+the data, and to the cloud control plane.
+
+── IF ASKED ──
+which would you fix first?
+  → honestly: the ordering only exists once you can see the path. that's two
+    slides away and it's the whole argument for a graph. I'd rather not
+    pre-empt it.
+is the Mongo firewall not enough?
+  → it is doing its job — Mongo is reachable only from the GKE ranges. that's
+    exactly WHY the chain runs through the application: from the internet, the
+    pod is the only route to that credential.
 -->
 
 ---
@@ -154,16 +186,21 @@ layout: default
 Every tool owns one column. **None of them owns the chain.** {.punch}
 
 <!--
-This is the only reference-density slide in the deck, and it earns its place:
-point at the third column rather than reading the table.
+— don't read the table. point at the third column.
 
-AppSec tooling owns the front of the chain. IaC scanning and cloud logging own
-the back. Not one of them can see the whole path — which is precisely the gap
-the Wiz slide fills.
+— AppSec tooling owns the FRONT of the chain
+— IaC scanning and cloud logging own the BACK
+— nothing owns the middle, and nothing owns the whole
 
-Row 3 is the one to dwell on. Originally NOTHING here caught it, and the reason
-is structural: every scanner in these pipelines looks at either the app image or
-the IaC configuration, and the database is apt-installed onto a VM that none of
-them inspects. I added a lifecycle check to close it — that story is two slides
-away, and the residual gap is on the closing slide.
+— row 3 is the honest one — originally nothing here caught it at all
+  I added the lifecycle check. that story's two slides away.
+
+── IF ASKED ──
+why is the SSH row so thin?
+  → Checkov flags the rule fine. nothing watches whether anyone USES it,
+    because no host logs are shipped. real gap, not a demo shortcut.
+Gatekeeper only helps the "next" pod?
+  → right. admission control acts at create time. it can't retro-fix the
+    binding that already exists — which is deliberate here, because the
+    existing weaknesses have to survive for the detective demo.
 -->

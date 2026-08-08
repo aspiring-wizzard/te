@@ -13,13 +13,19 @@ layout: default
 The weaknesses are **requirements**, not accidents. {.punch}
 
 <!--
-Land the last line deliberately. Five weaknesses, chosen so they compose into a
-single path rather than sitting as five unrelated tickets — that composition is
-the whole argument of the deck, and it starts here.
+— all of this is required. the last line is the one I chose.
 
-If asked why NodeGoat rather than the sample todo app: a clean app gives the
-scanners nothing to find, and a pipeline reporting "all clear" demonstrates
-nothing.
+— I could have scattered five weaknesses around and ticked the box. didn't.
+  picked five that CHAIN.
+— on its own each is an afternoon's ticket: role binding · version pin ·
+  bucket ACL
+— in the right order: internet → app → cluster → data → cloud control plane
+— that's what the next ten minutes are about
+
+── IF ASKED ──
+why NodeGoat, not the sample todo app?
+  → a clean app gives the scanners nothing to find. a pipeline reporting
+    "all clear" proves nothing. I wanted real findings.
 -->
 
 ---
@@ -58,12 +64,22 @@ flowchart LR
 OpenTofu · OWASP NodeGoat from Artifact Registry · four GitHub Actions pipelines {.aside}
 
 <!--
-Walk the solid arrows first — that is the intended path a user takes. Then the
-two dotted ones, which are the unintended paths: SSH open to the world, and
-anonymous read on the backup bucket.
+— solid arrows = how a user reaches it
+  internet → load balancer → ingress → the pods → Mongo on 27017
+— dotted = the two ways in nobody intended
+  SSH from anywhere · anonymous read on the backups
 
-Red outline = deliberately weak. Everything else is a genuine control: the
-Mongo VM is firewalled to the GKE ranges only, auth IS required, GKE nodes are
-private. Worth saying, or the environment reads as uniformly careless rather
-than deliberately weak in five specific places.
+— red outline = deliberately weak, only two things here
+
+— and be clear about what ISN'T weak:
+  Mongo firewalled to the GKE ranges only · auth IS required ·
+  nodes are private · no credentials in the repo
+— otherwise this reads as uniformly careless. it's weak in five
+  specific places, on purpose.
+
+── IF ASKED ──
+why a VM for the database, not a managed service?
+  → the exercise asked for it, and it's the realistic shape — the VM
+    that predates the container platform. it also turns out to be the
+    part nothing scans, which comes up later.
 -->
