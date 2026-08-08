@@ -177,3 +177,18 @@ graph, and that's the next slide."*
   Yes. Allowlist-by-image is the enforced baseline; the stronger posture is cosign
   attestations verified by the policy, which is a named next step. The enforcement
   mechanism — control-plane admission, default-deny — is already the right one.
+- **"Your cluster has three High-priority recommendations — what are those?"** —
+  Reliability recommendations, not security findings, and I can account for all
+  three. One is a node-service-account best-practice nudge. The other two are my
+  own Gatekeeper webhook: it's fail-closed and intercepts broadly, and I'm running
+  a single replica — which I chose deliberately to stop Gatekeeper's stock
+  HA footprint evicting the app on a $200 two-node cluster. A single-replica,
+  fail-closed admission webhook that intercepts system requests genuinely *is* a
+  reliability risk — if that pod is down, it can block cluster operations. In
+  production the fix is to exclude system namespaces from the webhook and run
+  multiple replicas; here I accepted the single replica as a known trade-off. GKE's
+  own recommender catching that is the native tooling working — and it's the same
+  point as the control that ate the workload: **controls are not free.** I'd rather
+  show you the trade-off and explain it than hide it behind a green dashboard.
+  (This is a *reliability* view — the security misconfiguration findings, run-as-root
+  and so on, are in the Security Posture → Concerns tab, a different screen.)
