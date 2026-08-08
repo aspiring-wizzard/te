@@ -211,7 +211,7 @@ slides:
       # it. Plain byte-level substitution passes UTF-8 through untouched, and
       # the pattern is pure ASCII, so byte matching is still correct.
       PRESENTER="$WIZ_EXERCISE_NAME" \
-        perl -pe 's/\{\{PRESENTER\}\}/$ENV{PRESENTER}/g' .slides.tmp > slides.md
+        perl -pe 's/__PRESENTER__/$ENV{PRESENTER}/g' .slides.tmp > slides.md
       who="$WIZ_EXERCISE_NAME"
     else
       mv .slides.tmp slides.md

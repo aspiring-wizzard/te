@@ -1,0 +1,107 @@
+/* Global deck styling — auto-loaded by Slidev.
+ *
+ * Everything here used to live in per-slide <style> blocks inside the parts.
+ * It moved out so the parts stay editable as markdown: the content is what you
+ * change often, the presentation mechanics are what you change once.
+ *
+ * Rule of thumb for this deck: if a slide needs type smaller than ~0.8rem to
+ * fit, the slide has too much on it. Cut the slide, don't shrink the type.
+ */
+
+/* --- type scale ------------------------------------------------------ */
+
+.slidev-layout h1 {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.4rem;
+}
+
+.slidev-layout h2 {
+  font-size: 1.35rem;
+  font-weight: 500;
+  opacity: 0.85;
+  margin: 0.2rem 0 0.6rem;
+}
+
+/* Section labels inside columns — deliberately quiet, they are signposts
+   rather than content. */
+.slidev-layout h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin: 0 0 0.7rem;
+}
+
+.slidev-layout ul {
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.slidev-layout ul li {
+  margin-bottom: 0.75rem;
+}
+
+/* The one-line statement under a title. Sets up the slide; never carries
+   detail — that belongs in the presenter notes. */
+.slidev-layout .lede {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  opacity: 0.7;
+  margin-bottom: 1.6rem;
+  max-width: 52ch;
+}
+
+/* A single sentence that IS the slide's point. Used sparingly. */
+.slidev-layout .punch {
+  font-size: 1.3rem;
+  line-height: 1.45;
+  font-weight: 500;
+  margin-top: 1.8rem;
+  max-width: 60ch;
+}
+
+/* Quiet caveat text, e.g. "controls that ARE in place". */
+.slidev-layout .aside {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  opacity: 0.6;
+  margin-top: 1.6rem;
+}
+
+/* --- layout ---------------------------------------------------------- */
+
+/* Breathing room between two-column layouts: the default gutter lets the
+   right column's bullet markers sit against the left column's text. */
+.slidev-layout .col-left  { padding-right: 1.75rem; }
+.slidev-layout .col-right { padding-left:  1.75rem; }
+
+/* --- mermaid --------------------------------------------------------- */
+
+/* Wide flowcharts render at their natural width and are silently clipped at
+   the slide edge. Let the SVG scale to the slide instead of hand-tuning a
+   per-diagram `scale:` value that has to be re-guessed on every edit. */
+.slidev-layout .mermaid {
+  display: flex;
+  justify-content: center;
+}
+
+.slidev-layout .mermaid svg {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- tables ---------------------------------------------------------- */
+
+.slidev-layout table {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.slidev-layout th,
+.slidev-layout td {
+  padding: 0.3rem 0.5rem;
+  vertical-align: top;
+}

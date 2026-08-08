@@ -2,96 +2,95 @@
 layout: two-cols-header
 ---
 
-# Business value: what the environment delivers
-
-The application *is* the product. Its code, its dependencies and the cloud it runs in are **one risk surface, and one budget**.
+# Why this costs money before anyone is breached
 
 ::left::
 
 ### What the business gets
 
-- **The product itself** — user accounts, profiles, financial allocations. That data *is* the business.
-- **Change velocity that survives review** — every change is a reviewed PR through four pipelines. The controls sit *on the delivery path*, so they scale with it rather than against it.
-- **A known supply chain** — image scanned and inventoried (CycloneDX SBOM) before push. *"What are we running?"* becomes a query, not an excavation.
-- **Reproducible and recoverable** — the environment is HCL; `plan` diffs every change. Daily `mongodump`, RPO ≤ 24 h.
-- **Auditable from day one** — Cloud Audit Logs: admin activity *and* data access.
+- The product itself — user accounts and financial data
+- Change velocity that survives review
+- A **known supply chain** — SBOM per build
+- Reproducible; RPO ≤ 24 h
+- Auditable from day one
 
 ::right::
 
-### Why the controls sit in the pull request
+### Where a flaw is caught
 
-| Caught | What it costs |
+| Caught | Costs |
 |---|---|
-| In the pull request | a commit and a review comment |
-| At build or admission | a rebuild — never reaches a customer |
-| In production | rotation, incident response, audit trail, customer comms, notification decision |
+| In the pull request | a review comment |
+| At build or admission | a rebuild |
+| In production | rotation · IR · customer comms |
 
-<div class="mt-4">
-
-A gate that **blocks delivery gets routed around** — an exception, a bypass flag, a second pipeline. A gate that **answers inside the pull request** gets adopted.
-
-**Adoption is a design constraint, not a rollout problem.**
-
-</div>
-
-<style>
-  .slidev-layout li { font-size: 0.82rem; line-height: 1.42; margin-bottom: 0.35rem; }
-  .slidev-layout table { font-size: 0.78rem; }
-</style>
+A gate that **blocks** gets routed around. A gate that **answers** gets adopted. {.punch}
 
 <!--
-The asymmetry IS the argument — no invented figures needed. The same finding is cheap in a pull
-request and expensive in an incident. On supply chain: the difference between an afternoon and a
-fortnight when the next Log4Shell lands.
+The asymmetry IS the argument — no invented figures needed, and none are used
+anywhere in this deck.
+
+On the supply chain line: "what are we running, and what is inside it" becomes a
+query rather than an excavation. That is the difference between an afternoon and
+a fortnight when the next Log4Shell lands.
+
+On the last line: adoption is a design constraint, not a rollout problem. A gate
+developers route around — an exception, a bypass flag, a second pipeline — is a
+gate that has already failed, however good its findings are.
 -->
 
 ---
 layout: two-cols-header
 ---
 
-# Business risk: what it carries
+# Disclosure, not downtime
 
-The failure mode here is **disclosure, not downtime** — user data leaving, which no deploy reverses.
+This is not an outage you roll back. {.lede}
 
 ::left::
 
 ### The exposure
 
-- **The copy nobody is watching** — the daily backup lands in a bucket granting `allUsers` read **and** list. No exploit, no credential, no login: enumerate and download.
-- **EU regulation makes it a board question** — under **GDPR** that bucket is a personal-data breach with a statutory notification clock (Art. 33), not a backlog item. **DORA** and **NIS2** add ICT-risk, supply-chain and incident-reporting duties — with management bodies accountable.
-- **Privilege concentrated in two identities** — one pod service account, one VM service account. Compromise either and the blast radius is the whole cluster, or the whole project.
+- Backup bucket: `allUsers` **read + list**
+- No exploit. No credential. No login.
+- GDPR Art. 33 clock — not a backlog item
+- Privilege concentrated in **two identities**
 
 ::right::
 
 ### The cost of an unranked list
 
-- Every control produces **its own list on its own scale** — SAST, dependency CVEs, image CVEs, IaC misconfigurations, cloud posture. **None of them knows the others exist.**
-- The team triages hundreds of undifferentiated findings in CVSS order while the one genuinely exploitable combination waits its turn.
-- The cost is **analyst-weeks spent on findings that cannot be reached** — and a list nobody can finish is a list nobody trusts.
+- Five tools. Five lists. Five scales.
+- **None knows the others exist**
+- Analyst-weeks on findings nobody can reach
 
-<div class="mt-6 text-sm opacity-70">
-
-**Controls that *are* in place:** MongoDB requires authentication and is firewalled to the GKE node and pod ranges only · GKE nodes are private · no credentials, state or tfvars in the repository.
-
-</div>
-
-<style>
-  .slidev-layout li { font-size: 0.82rem; line-height: 1.42; margin-bottom: 0.45rem; }
-</style>
+Mongo requires auth and is firewalled to the GKE ranges · nodes are private · no credentials in the repo {.aside}
 
 <!--
-Blast radius is a COMMERCIAL measure: how much of the business one bad afternoon can reach.
-An SBOM stops being paperwork the moment someone has to answer "which of our systems contained
-that library". The environment is weak by design, but weak in the ways real estates are.
+"Disclosure, not downtime" is the line to land. Everything else on the slide
+supports it: user data leaving is not recoverable by rolling back a deploy.
+
+The bucket is the sharpest version — same data as the database, a different
+control set, and a quieter owner. Enumerate and download; no exploit needed.
+
+Regulation, if it comes up: under GDPR that bucket is a personal-data breach
+with a statutory notification clock attached, not a ticket. DORA and NIS2 add
+ICT-risk, supply-chain and incident-reporting duties, with management bodies
+accountable for the measures. An SBOM stops being paperwork the moment someone
+has to answer "which of our systems contained that library".
+
+Blast radius is a commercial measure: how much of the business one bad afternoon
+can reach.
+
+The aside matters — say it. Otherwise this reads as a uniformly careless
+environment rather than a deliberately weak one.
 -->
 
 ---
 layout: default
 ---
 
-# Security outcomes: five findings, one attack path
-
-Five planted weaknesses — plus the application they exist around. **The chain starts in the code, not in the cloud posture.**
+# Five findings. One attack path.
 
 ```mermaid
 flowchart LR
@@ -111,71 +110,51 @@ flowchart LR
   class K8S,CP,BKT crown
 ```
 
-<style>
-  /* Let the SVG scale itself to the slide rather than hand-tuning a `scale:`
-     magic number — a wide flowchart otherwise renders at its natural width and
-     is silently clipped at the slide edge. */
-  .slidev-layout .mermaid { display: flex; justify-content: center; }
-  .slidev-layout .mermaid svg { width: 100%; max-width: 100%; height: auto; }
-</style>
-
-<div class="mt-6 text-sm">
-
-**Individually:** five routine tickets — a role binding, a version pin, an IAM role, a bucket ACL, a firewall rule — plus *"the app has findings"*, which every app has. **Five different owners.** None alarming on its own.
-
-**Chained:** one exploitable path from a line of application code to the cluster, the data *and* the cloud control plane — with a second, credential-free route to the same data via the bucket.
-
-</div>
+Five routine tickets. Five different owners. One chain. {.punch}
 
 <!--
-Land this slowly, and start at the LEFT of the graph — the entry point is application code, not a
-firewall rule. If asked which finding to fix first: the ordering only exists once you can see the
-path, which is exactly the setup for the Wiz slide.
+Start at the LEFT of the graph and say it explicitly: the entry point is
+application code, not a firewall rule. The chain starts in the app.
+
+Individually these are a role binding, a version pin, an IAM role, a bucket ACL
+and a firewall rule — plus "the app has findings", which every app has. Owned by
+application, platform, database, cloud and data teams respectively. Nothing here
+would page anyone.
+
+Chained: one path from a line of application code to the cluster, the data AND
+the cloud control plane — with a second, credential-free route to the same data
+through the bucket.
+
+If asked which to fix first: the ordering only exists once you can see the path.
+That is the setup for the Wiz slide — do not pre-empt it here.
 -->
 
 ---
 layout: default
 ---
 
-# The five findings, and who owns each
+# Who catches each one
 
-<div class="text-xs">
+| # | Finding | Caught by |
+|---|---|---|
+| — | Application code + dependencies | Semgrep · Trivy fs |
+| — | Internet-facing, unauthenticated | ZAP, on the running app |
+| 5 | Pod SA bound to `cluster-admin` | Gatekeeper — only for the *next* pod |
+| 3 | MongoDB 5.0, EOL, unpatched | **nothing in these pipelines** |
+| 2 | VM SA holds `roles/editor` | Checkov · Cloud Audit Logs |
+| 4 | Bucket grants `allUsers` | Checkov · log-based alert |
+| 1 | SSH `0.0.0.0/0` | Checkov — nothing watches its *use* |
 
-| # | Link in the chain | Role | Caught by |
-|---|---|---|---|
-| — | **Application code + dependencies** — injection, XSS and SSRF-class flaws, plus known-vulnerable npm packages | **Entry point** — the way in is the app, not the perimeter | Semgrep (SAST) · Trivy fs (SCA) |
-| — | **Internet-facing** behind the Cloud load balancer | **Reachability** — what makes the flaw exploitable rather than theoretical | ZAP (DAST), on the running app |
-| 5 | App pod service account bound to **`cluster-admin`** | **Cluster takeover** — every Secret in every namespace, `mongo-credentials` included | Gatekeeper — but only for the *next* workload |
-| 3 | **MongoDB 5.0 (EOL Oct 2024)**, unpatched, on the VM that credential opens | **Known CVEs** on the data tier, no vendor fixes coming | VM patching — and the version is **pinned by the app's driver**, so patching alone cannot fix it |
-| 2 | That VM's service account holds **`roles/editor`** | **Privilege escalation** — host → GCP control plane | Checkov pre-`apply` · Cloud Audit Logs post-deploy |
-| 4 | Backup bucket grants `allUsers` read **and** list | **Data exposure** — no exploit, no credential, no login | Checkov pre-`apply` · log-based metric + alert on anonymous reads |
-| 1 | SSH `0.0.0.0/0` to a public-IP VM | **Second, parallel entry point** — still real, no longer the headline | Checkov pre-`apply` — nothing watches its *use* at runtime |
-
-</div>
-
-<div class="text-xs opacity-70 mt-4">
-
-**On #3:** authentication **is** enforced and Mongo **is** firewalled to the GKE node and pod ranges only — both required controls. The exposure is the unpatched version, not the access path. That firewall is also *why* the chain runs through the application: from the internet, the pod is the only route to that credential.
-
-</div>
-
-<style>
-  .slidev-layout table { font-size: 0.62rem; line-height: 1.3; }
-  .slidev-layout th, .slidev-layout td { padding: 0.18rem 0.4rem; vertical-align: top; }
-</style>
+Every tool owns one column. **None of them owns the chain.** {.punch}
 
 <!--
-Every scanner in the market produces this table. The table is not the risk — the ORDERING is.
-Point at the fourth column: AppSec tooling owns the front of the chain, IaC scanning and cloud
-logging the back, and not one of them sees the whole path.
--->
+This is the only reference-density slide in the deck, and it earns its place:
+point at the third column rather than reading the table.
 
+AppSec tooling owns the front of the chain. IaC scanning and cloud logging own
+the back. Not one of them can see the whole path — which is precisely the gap
+the Wiz slide fills.
 
-<!--
-Land this slowly, and start at the left of the graph — the entry point is application code, not a
-firewall rule. Every scanner in the market produces this table; the table is not the risk, the
-ordering is. Point at the fourth column: AppSec tooling owns the front of the chain, IaC scanning
-and cloud logging the back, and not one of them can see the whole path. If asked which finding to
-fix first, the honest answer is that the ordering only exists once you can see the path — which is
-exactly the setup for the Wiz slide.
+Row 3 is the one to dwell on, because it is the honest one: nothing in these
+pipelines catches an EOL datastore. That story is two slides away.
 -->

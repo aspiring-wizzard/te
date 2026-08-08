@@ -12,30 +12,34 @@ class: text-center
 
 # Wiz Technical Exercise
 
-A deliberately-vulnerable two-tier application on GCP — built, automated, and instrumented so that five findings tell one story.
+Five findings. One attack path. {.lede .mx-auto}
 
-<div class="mt-10 text-lg">
-  <b>{{PRESENTER}}</b> · Principal Solutions Engineer, Application Security
-</div>
+**__PRESENTER__** · Principal Solutions Engineer, Application Security {.mt-12.opacity-70}
 
-<div class="abs-bl m-6 text-left text-sm opacity-60">
-  OpenTofu · GKE · MongoDB · GitHub Actions · GCP <code>europe-west1</code>
-</div>
+OpenTofu · GKE · MongoDB · GitHub Actions · GCP `europe-west1` {.mt-2.text-sm.opacity-50}
 
+<!--
+Keep this short. The deck is the supporting act — the environment is live and
+the walkthrough is the substance.
+-->
 
 ---
 
-# Agenda
+# What I'll cover
 
-1. **Overview & what I built** — the GCP reference architecture
-2. **Business value & risk** — what the environment delivers, and what it costs
-3. **How I built it** — the pipeline as the control plane: SAST, SCA, secrets, SBOM, DAST
-4. **Challenges** — what bit, and what I changed
-5. **Security outcomes** — from vulnerable code to the cloud control plane: one attack path
-6. **Where Wiz changes the outcome** — context and prioritisation
-7. **What I'd do differently**
-8. **Live walkthrough** — `kubectl`, the app, the data, the controls firing
+- **What I built** — and what is deliberately wrong with it
+- **The business case** — why this costs money before anyone is breached
+- **One attack path** — five findings, five owners, one chain
+- **How it is built** — the pipeline as the control plane
+- **What broke** — the four failures worth telling you about
+- **Where Wiz changes the outcome**
 
-<div class="mt-10 text-sm opacity-70">
-~15 minutes on the slides, then the live environment — 25 minutes of Q&A after.
-</div>
+~15 minutes here, then the live environment. {.aside}
+
+<!--
+Signal early that the demo is the point and the slides are scaffolding — it buys
+patience for the setup slides.
+
+The "what broke" section is deliberately on the agenda. Panels expect a polished
+story; offering the failures up front is what makes the rest credible.
+-->

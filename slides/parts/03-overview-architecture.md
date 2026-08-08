@@ -1,21 +1,26 @@
 ---
 layout: default
-class: text-sm
 ---
 
-# Overview
+# What the exercise asked for
 
-What the exercise asked for:
+- A **deliberately vulnerable** two-tier app on Kubernetes
+- **Everything as code** — no click-ops
+- **Cloud-native controls** — one preventative, one detective
+- **Security in the pipeline** — scan before deploy
+- **Prove it live** — `kubectl`, the file in the container, real data
 
-- **A deliberately-vulnerable two-tier app** — containerised workload on Kubernetes in a private subnet, MongoDB on a VM in a public subnet, daily backups to a publicly-readable bucket.
-- **Everything as code** — the environment deployed as IaC, the application built and shipped by pipeline. No click-ops.
-- **Cloud-native security** — control-plane audit logging, plus at least one preventative and one detective control from CSP-native tooling.
-- **Security in the pipeline** — IaC and container image scanned *before* deployment (the Dev(Sec)Ops bonus).
-- **Prove it live** — `kubectl` against the cluster, `wizexercise.txt` inside the running container, real data in the database.
+The weaknesses are **requirements**, not accidents. {.punch}
 
-<div class="mt-8 text-sm opacity-70">
-The weaknesses are <b>requirements</b>, not accidents — five of them, chosen so they compose into a single attack path.
-</div>
+<!--
+Land the last line deliberately. Five weaknesses, chosen so they compose into a
+single path rather than sitting as five unrelated tickets — that composition is
+the whole argument of the deck, and it starts here.
+
+If asked why NodeGoat rather than the sample todo app: a clean app gives the
+scanners nothing to find, and a pipeline reporting "all clear" demonstrates
+nothing.
+-->
 
 ---
 layout: default
@@ -23,7 +28,7 @@ layout: default
 
 # What I built
 
-```mermaid {scale: 0.72}
+```mermaid
 flowchart LR
   net(["Internet"])
   lb["Cloud LB"]
@@ -50,8 +55,15 @@ flowchart LR
   class vm,gcs weak
 ```
 
-<div class="grid grid-cols-3 gap-6 mt-4 text-sm">
-  <div><b>Infrastructure</b><br/>OpenTofu (standard HCL) — VPC, private GKE, Mongo VM, bucket, IAM, controls</div>
-  <div><b>Application</b><br/>OWASP NodeGoat, rebuilt with <code>wizexercise.txt</code>, served from Artifact Registry</div>
-  <div><b>Delivery</b><br/>Two GitHub Actions pipelines, each gated by a scan before anything deploys</div>
-</div>
+OpenTofu · OWASP NodeGoat from Artifact Registry · four GitHub Actions pipelines {.aside}
+
+<!--
+Walk the solid arrows first — that is the intended path a user takes. Then the
+two dotted ones, which are the unintended paths: SSH open to the world, and
+anonymous read on the backup bucket.
+
+Red outline = deliberately weak. Everything else is a genuine control: the
+Mongo VM is firewalled to the GKE ranges only, auth IS required, GKE nodes are
+private. Worth saying, or the environment reads as uniformly careless rather
+than deliberately weak in five specific places.
+-->
