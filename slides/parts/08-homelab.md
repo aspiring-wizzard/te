@@ -44,15 +44,8 @@ fortnight, and this one has been true for years.
 That's the gap. And it's why I believe this argument rather than just being
 able to make it.
 
-── IF ASKED ──
-so why haven't you added SAST?
-  → honestly, the same reason your customers haven't. It's a separate thing to
-    stand up, own and tune, and there is always something with a deadline in
-    front of it. That is the adoption problem, and it's exactly why the gate
-    has to answer inside the pull request rather than being another console
-    somebody has to remember to open.
-what's in the estate?
-  → self-hosted git and CI, monitoring and alerting, backups with restore
-    drills, home automation. The version automation is the piece most relevant
-    here.
+#### If asked
+
+- **so why haven't you added SAST?** — *honestly, the same reason your customers haven't. It's a separate thing to stand up, own and tune, and there is always something with a deadline in front of it. That is the adoption problem, and it's exactly why the gate has to answer inside the pull request rather than being another console somebody has to remember to open.*
+- **what's in the estate?** — *self-hosted git and CI, monitoring and alerting, backups with restore drills, home automation. The version automation is the piece most relevant here.*
 -->

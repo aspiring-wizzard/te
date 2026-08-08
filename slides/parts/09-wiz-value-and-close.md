@@ -24,23 +24,17 @@ Three lists. Three scales. {.punch}
 - That the bucket needs **no exploit at all**
 
 <!--
-— everything on the left is real, and already caught today. no gaps there.
+- everything on the left is real, and already caught today. no gaps there.
 
-— the right column is not a tooling gap. it's a MODEL gap.
-  no scanner here holds identity + reachability + RBAC in one place,
-  so none of them can express a PATH — only a list
+- the right column is not a tooling gap. it's a MODEL gap. no scanner here holds identity + reachability + RBAC in one place, so none of them can express a PATH — only a list
 
-— and buying more scanners doesn't fix it:
-  Snyk on the app side = a better flat list. still flat.
-  SCC = a fourth console reporting the same misconfigurations again
+- and buying more scanners doesn't fix it: Snyk on the app side = a better flat list. still flat. SCC = a fourth console reporting the same misconfigurations again
 
-— slow down here. this is the setup; the next slide is the payoff.
+- slow down here. this is the setup; the next slide is the payoff.
 
-── IF ASKED ──
-couldn't you correlate these yourself?
-  → I did — that's the attack-path slide. It took me knowing the environment
-    intimately and going looking. That doesn't scale to an estate I didn't
-    build, and it doesn't survive me leaving.
+#### If asked
+
+- **couldn't you correlate these yourself?** — *I did — that's the attack-path slide. It took me knowing the environment intimately and going looking. That doesn't scale to an estate I didn't build, and it doesn't survive me leaving.*
 -->
 
 ---
@@ -84,17 +78,11 @@ terraform/bucket.tf. So the fix ships as a pull request against the
 infrastructure code — which matters, because if you fix this in the console,
 the next apply puts it straight back.
 
-── IF ASKED ──
-where does the 32 come from?
-  → Checkov's actual output in CI against terraform/ — 56 passed, 32 failed.
-    It'll drift as the code changes. The number isn't the point; "unordered" is.
-have you used Wiz in production?
-  → No, and I won't pretend otherwise. This is the narrative built on real
-    artefacts — I'm describing the edges Wiz would draw over this specific
-    project, not replaying a tenant I've operated.
-is this just better prioritisation?
-  → It holds because the graph knows reachability and identity, not because it
-    has a better CVE feed. That distinction is the whole thing.
+#### If asked
+
+- **where does the 32 come from?** — *Checkov's actual output in CI against terraform/ — 56 passed, 32 failed. It'll drift as the code changes. The number isn't the point; "unordered" is.*
+- **have you used Wiz in production?** — *No, and I won't pretend otherwise. This is the narrative built on real artefacts — I'm describing the edges Wiz would draw over this specific project, not replaying a tenant I've operated.*
+- **is this just better prioritisation?** — *It holds because the graph knows reachability and identity, not because it has a better CVE feed. That distinction is the whole thing.*
 -->
 
 ---
@@ -122,33 +110,18 @@ layout: two-cols-header
 Agentless disk scanning closes the first. A runtime sensor closes the second. {.punch}
 
 <!--
-— left column: things I traded away knowingly, not things I missed
-  Pulumi lost to HCL's scanning ecosystem — I'd revisit that the day a
-  pipeline standardises on policy-as-code
+- left column: things I traded away knowingly, not things I missed Pulumi lost to HCL's scanning ecosystem — I'd revisit that the day a pipeline standardises on policy-as-code
 
-— right column is the honest limit of the whole exercise:
-  everything I built reasons about CONFIGURATION
-  it can tell you the path is exploitable
-  it cannot tell you it IS being exploited
+- right column is the honest limit of the whole exercise: everything I built reasons about CONFIGURATION it can tell you the path is exploitable it cannot tell you it IS being exploited
 
-— and that's two different fixes:
-  no VM SBOM        → agentless disk scanning
-  config ≠ behaviour → a runtime sensor
-  ("the vulnerable pod actually spawned a shell and hit 169.254.169.254" —
-   that's the difference between an attack path and an incident)
+- and that's two different fixes: no VM SBOM        → agentless disk scanning config ≠ behaviour → a runtime sensor ("the vulnerable pod actually spawned a shell and hit 169.254.169.254" — that's the difference between an attack path and an incident)
 
-— last line: I've shown Gatekeeper REJECT a pod. I have never made the
-  detective control fire. that's the first thing I'd add with more lab time.
+- last line: I've shown Gatekeeper REJECT a pod. I have never made the detective control fire. that's the first thing I'd add with more lab time.
 
-── IF ASKED ──
-what would the simulation look like?
-  → SSH in from the internet → download the backup anonymously → use the pod
-    token to read Secrets → use the VM token to list instances → then watch
-    the log-based alert fire and the calls land in Cloud Audit Logs.
-anything else still open?
-  → the generated password resolves into Terraform state. That's why state is
-    versioned, IAM-restricted and public-access-enforced. The real fix is it
-    never passing through Terraform at all.
+#### If asked
+
+- **what would the simulation look like?** — *SSH in from the internet → download the backup anonymously → use the pod token to read Secrets → use the VM token to list instances → then watch the log-based alert fire and the calls land in Cloud Audit Logs.*
+- **anything else still open?** — *the generated password resolves into Terraform state. That's why state is versioned, IAM-restricted and public-access-enforced. The real fix is it never passing through Terraform at all.*
 -->
 
 ---

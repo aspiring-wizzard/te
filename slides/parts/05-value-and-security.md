@@ -27,22 +27,13 @@ layout: two-cols-header
 A gate that blocks **without answering** gets routed around. {.punch}
 
 <!--
-— the app IS the product. the data is the business.
-  everything else here exists to keep it available and keep it private.
+- the app IS the product. the data is the business. everything else here exists to keep it available and keep it private.
 
-— the table on the right is the whole economic argument, and it needs
-  no invented numbers:
-    pull request      → a review comment
-    build / admission → a rebuild, nobody outside sees it
-    production        → rotation, IR, customer comms, a notification decision
+- the table on the right is the whole economic argument, and it needs no invented numbers: pull request      → a review comment build / admission → a rebuild, nobody outside sees it production        → rotation, IR, customer comms, a notification decision
 
-— supply chain: an SBOM per build means "what are we running, and what's
-  inside it" is a QUERY, not an excavation
-  → afternoon vs. fortnight when the next Log4Shell lands
+- supply chain: an SBOM per build means "what are we running, and what's inside it" is a QUERY, not an excavation — afternoon vs. fortnight when the next Log4Shell lands
 
-— last line: adoption is a design constraint, not a rollout problem
-  a gate people route around — exception, bypass flag, second pipeline —
-  has already failed, however good its findings are
+- last line: adoption is a design constraint, not a rollout problem a gate people route around — exception, bypass flag, second pipeline — has already failed, however good its findings are
 -->
 
 ---
@@ -73,35 +64,24 @@ This is not an outage you roll back. {.lede}
 Mongo requires auth and is firewalled to the GKE ranges · nodes are private · no credentials in the repo {.aside}
 
 <!--
-— this is the failure you don't roll back. you can redeploy an outage.
-  you can't un-disclose data.
+- this is the failure you don't roll back. you can redeploy an outage. you can't un-disclose data.
 
-— the bucket is the sharpest version of it:
-  same data as the database, different control set, quieter owner
-  enumerate and download — no exploit, no credential, no login
+- the bucket is the sharpest version of it: same data as the database, different control set, quieter owner
+- enumerate and download — no exploit, no credential, no login
 
-— privilege sits in exactly two identities: one pod SA, one VM SA
-  compromise either and it's the whole cluster, or the whole project
-  blast radius is a COMMERCIAL measure — how much of the business
-  one bad afternoon reaches
+- privilege sits in exactly two identities: one pod SA, one VM SA
+- compromise either and it's the whole cluster, or the whole project
+- blast radius is a COMMERCIAL measure — how much of the business one bad afternoon reaches
 
-— right side: five tools, five lists, five scales, none aware of the others
-  the cost isn't the findings. it's triage spent on things nobody can reach.
+- right side: five tools, five lists, five scales, none aware of the others
+- the cost isn't the findings — it's triage spent on things nobody can reach
 
-— read the grey line at the bottom out loud — otherwise this sounds like a
-  uniformly careless environment instead of five deliberate holes
+- read the grey line at the bottom out loud — otherwise this sounds like a uniformly careless environment instead of five deliberate holes
 
-── IF ASKED ──
-GDPR specifics?
-  → Art. 33 isn't automatic notification. it's a 72-hour clock on a DECISION:
-    assess whether it's likely to risk data subjects' rights and freedoms,
-    notify if yes, document the reasoning if no. either way somebody decides,
-    on a deadline.
-DORA / NIS2?
-  → ICT-risk management, third-party and supply-chain security, incident
-    reporting — with management bodies accountable for the measures.
-    an SBOM stops being paperwork the moment someone has to answer
-    "which of our systems contained that library".
+#### If asked
+
+- **GDPR specifics?** — *Art. 33 isn't automatic notification. it's a 72-hour clock on a DECISION: assess whether it's likely to risk data subjects' rights and freedoms, notify if yes, document the reasoning if no. either way somebody decides, on a deadline.*
+- **DORA / NIS2?** — *ICT-risk management, third-party and supply-chain security, incident reporting — with management bodies accountable for the measures. an SBOM stops being paperwork the moment someone has to answer "which of our systems contained that library".*
 -->
 
 ---
@@ -156,15 +136,10 @@ anybody at three in the morning.
 Chained, it's a single path from a line of application code to the cluster, to
 the data, and to the cloud control plane.
 
-── IF ASKED ──
-which would you fix first?
-  → honestly: the ordering only exists once you can see the path. that's two
-    slides away and it's the whole argument for a graph. I'd rather not
-    pre-empt it.
-is the Mongo firewall not enough?
-  → it is doing its job — Mongo is reachable only from the GKE ranges. that's
-    exactly WHY the chain runs through the application: from the internet, the
-    pod is the only route to that credential.
+#### If asked
+
+- **which would you fix first?** — *honestly: the ordering only exists once you can see the path. that's two slides away and it's the whole argument for a graph. I'd rather not pre-empt it.*
+- **is the Mongo firewall not enough?** — *it is doing its job — Mongo is reachable only from the GKE ranges. that's exactly WHY the chain runs through the application: from the internet, the pod is the only route to that credential.*
 -->
 
 ---
@@ -186,21 +161,16 @@ layout: default
 Every tool owns one column. **None of them owns the chain.** {.punch}
 
 <!--
-— don't read the table. point at the third column.
+- don't read the table. point at the third column.
 
-— AppSec tooling owns the FRONT of the chain
-— IaC scanning and cloud logging own the BACK
-— nothing owns the middle, and nothing owns the whole
+- AppSec tooling owns the FRONT of the chain
+- IaC scanning and cloud logging own the BACK
+- nothing owns the middle, and nothing owns the whole
 
-— row 3 is the honest one — originally nothing here caught it at all
-  I added the lifecycle check. that story's two slides away.
+- row 3 is the honest one — originally nothing here caught it at all I added the lifecycle check. that story's two slides away.
 
-── IF ASKED ──
-why is the SSH row so thin?
-  → Checkov flags the rule fine. nothing watches whether anyone USES it,
-    because no host logs are shipped. real gap, not a demo shortcut.
-Gatekeeper only helps the "next" pod?
-  → right. admission control acts at create time. it can't retro-fix the
-    binding that already exists — which is deliberate here, because the
-    existing weaknesses have to survive for the detective demo.
+#### If asked
+
+- **why is the SSH row so thin?** — *Checkov flags the rule fine. nothing watches whether anyone USES it, because no host logs are shipped. real gap, not a demo shortcut.*
+- **Gatekeeper only helps the "next" pod?** — *right. admission control acts at create time. it can't retro-fix the binding that already exists — which is deliberate here, because the existing weaknesses have to survive for the detective demo.*
 -->

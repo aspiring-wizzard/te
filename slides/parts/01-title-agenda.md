@@ -19,12 +19,11 @@ Five findings. One attack path. {.lede .mx-auto}
 OpenTofu · GKE · MongoDB · GitHub Actions · GCP `europe-west1` {.mt-2.text-sm.opacity-50}
 
 <!--
-— thanks for the time. ~15 min on slides, then we go to the live environment
-  — that's the substance, this is scaffolding
+- thanks for the time. ~15 min on slides, then we go to the live environment
+- that's the substance, this is scaffolding
 
-— what I built: deliberately vulnerable two-tier app on GCP, all as code
-— five planted weaknesses. the interesting part isn't the five,
-  it's that they chain
+- what I built: deliberately vulnerable two-tier app on GCP, all as code
+- five planted weaknesses. the interesting part isn't the five, it's that they chain
 -->
 
 ---
@@ -41,12 +40,12 @@ OpenTofu · GKE · MongoDB · GitHub Actions · GCP `europe-west1` {.mt-2.text-s
 ~15 minutes here, then the live environment. {.aside}
 
 <!--
-— quick map so you know where we're going
+- quick map so you know where we're going
 
-— front half: what it is, and why it costs money before anyone is breached
-— middle: one attack path, and how the thing is built
-— then what broke — three failures. I'll be specific about which were mine
-— close: where Wiz changes the outcome. then live.
+- front half: what it is, and why it costs money before anyone is breached
+- middle: one attack path, and how the thing is built
+- then what broke — three failures. I'll be specific about which were mine
+- close: where Wiz changes the outcome. then live.
 
-— interrupt whenever. I'd rather go deep on one thing than finish all of it.
+- interrupt whenever. I'd rather go deep on one thing than finish all of it.
 -->

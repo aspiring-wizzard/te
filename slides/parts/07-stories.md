@@ -13,23 +13,15 @@ Four things went wrong. These are the three worth your time. {.lede}
 One was the app's. Two were mine. {.punch}
 
 <!--
-— four things went wrong. three are worth your time.
+- four things went wrong. three are worth your time.
 
-— and I want to be exact about the last line, because it's easy to dress
-  these up as trade-offs and they weren't:
-    the drift was MINE — built the wrong kind of security
-    Gatekeeper was MINE — never checked the controller was installed
-    the EOL database was the APP's — nobody decided that
+- and I want to be exact about the last line, because it's easy to dress these up as trade-offs and they weren't: the drift was MINE — built the wrong kind of security Gatekeeper was MINE — never checked the controller was installed the EOL database was the APP's — nobody decided that
 
-— these aren't confessions. they're the parts where I actually learned
-  something, and all three shapes will be familiar to you.
+- these aren't confessions. they're the parts where I actually learned something, and all three shapes will be familiar to you.
 
-── IF ASKED ──
-what was the fourth?
-  → arm64 image on amd64 nodes. it pulled perfectly and then wouldn't
-    execute — "exec format error", which reads like a corrupt image rather
-    than a wrong-architecture one. CI would never have caught it; the
-    runners are amd64. only local builds were affected.
+#### If asked
+
+- **what was the fourth?** — *arm64 image on amd64 nodes. it pulled perfectly and then wouldn't execute — "exec format error", which reads like a corrupt image rather than a wrong-architecture one. CI would never have caught it; the runners are amd64. only local builds were affected.*
 -->
 
 ---
@@ -73,11 +65,9 @@ the gap deliberately.
 It's also the honest reason this conversation lands with platform teams. They
 are not refusing to do AppSec. They are covering what they can see.
 
-── IF ASKED ──
-how did you catch it?
-  → I went back through the exercise brief and asked which requirement each
-    job satisfied. Nothing mapped to the AppSec bonus. The gap was in what I
-    hadn't written, so no test was ever going to find it.
+#### If asked
+
+- **how did you catch it?** — *I went back through the exercise brief and asked which requirement each job satisfied. Nothing mapped to the AppSec bonus. The gap was in what I hadn't written, so no test was ever going to find it.*
 -->
 
 ---
@@ -99,8 +89,7 @@ MongoError: Unsupported OP_QUERY command: find   (code 352)
 Patching cannot fix this. Only an application change can. {.punch}
 
 <!--
-— and hold that thought, because there's a second half to this one:
-  none of my scanners noticed any of it
+- and hold that thought, because there's a second half to this one: none of my scanners noticed any of it
 -->
 
 ---
@@ -144,15 +133,10 @@ source code. It sees what I declared. It cannot see what a startup script
 actually pulled onto that host, and it cannot see drift between the two.
 Closing that needs an SBOM of the machine itself.
 
-── IF ASKED ──
-can I see it?
-  → yes — `just demo-eol`, takes about two seconds.
-why not just use Trivy on the VM?
-  → that's exactly the right instinct, and it's the honest next step. Trivy
-    can scan a disk image. I didn't get there. Also worth knowing: mongodb-org
-    comes from MongoDB's own apt repo rather than Ubuntu's security tracker,
-    so CVE matching is weaker for it than for distro packages — which is why
-    the lifecycle signal is the more dependable one here.
+#### If asked
+
+- **can I see it?** — *yes — `just demo-eol`, takes about two seconds.*
+- **why not just use Trivy on the VM?** — *that's exactly the right instinct, and it's the honest next step. Trivy can scan a disk image. I didn't get there. Also worth knowing: mongodb-org comes from MongoDB's own apt repo rather than Ubuntu's security tracker, so CVE matching is weaker for it than for distro packages — which is why the lifecycle signal is the more dependable one here.*
 -->
 
 <!--
@@ -176,16 +160,10 @@ is an application change, with application testing and an application owner.
 It's an AppSec problem wearing an infrastructure costume. And it's how legacy
 risk actually arrives: not by decision, by accretion.
 
-── IF ASKED ──
-why Ubuntu 20.04 rather than something newer?
-  → the OS choice wasn't independent either. MongoDB 5.0 only publishes
-    server packages for focal. The jammy suite exists and returns HTTP 200,
-    but ships just the shell and tools — a reachable repository isn't a
-    supported one. The app's dependency tree reached all the way down to the
-    operating system.
-couldn't you have used a different app?
-  → yes, and then the exercise demonstrates nothing. The constraint is the
-    finding.
+#### If asked
+
+- **why Ubuntu 20.04 rather than something newer?** — *the OS choice wasn't independent either. MongoDB 5.0 only publishes server packages for focal. The jammy suite exists and returns HTTP 200, but ships just the shell and tools — a reachable repository isn't a supported one. The app's dependency tree reached all the way down to the operating system.*
+- **couldn't you have used a different app?** — *yes, and then the exercise demonstrates nothing. The constraint is the finding.*
 -->
 
 ---
@@ -230,11 +208,8 @@ think that's a large part of why security tooling gets quietly switched off in
 the real world. In production you size the cluster for the controls. In a
 capped sandbox, you right-size the control.
 
-── IF ASKED ──
-how did you fix it?
-  → scaled the controller to a single replica. Ample for one constraint, and
-    the recipe does it automatically now so a rebuild can't repeat it.
-why not just give the cluster more nodes?
-  → cost cap. And I'd rather the constraint stayed visible — it's the honest
-    version of a trade-off every platform team makes.
+#### If asked
+
+- **how did you fix it?** — *scaled the controller to a single replica. Ample for one constraint, and the recipe does it automatically now so a rebuild can't repeat it.*
+- **why not just give the cluster more nodes?** — *cost cap. And I'd rather the constraint stayed visible — it's the honest version of a trade-off every platform team makes.*
 -->

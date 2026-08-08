@@ -13,19 +13,16 @@ layout: default
 The weaknesses are **requirements**, not accidents. {.punch}
 
 <!--
-— all of this is required. the last line is the one I chose.
+- all of this is required. the last line is the one I chose.
 
-— I could have scattered five weaknesses around and ticked the box. didn't.
-  picked five that CHAIN.
-— on its own each is an afternoon's ticket: role binding · version pin ·
-  bucket ACL
-— in the right order: internet → app → cluster → data → cloud control plane
-— that's what the next ten minutes are about
+- I could have scattered five weaknesses around and ticked the box. didn't. picked five that CHAIN.
+- on its own each is an afternoon's ticket: role binding · version pin · bucket ACL
+- in the right order: internet → app → cluster → data → cloud control plane
+- that's what the next ten minutes are about
 
-── IF ASKED ──
-why NodeGoat, not the sample todo app?
-  → a clean app gives the scanners nothing to find. a pipeline reporting
-    "all clear" proves nothing. I wanted real findings.
+#### If asked
+
+- **why NodeGoat, not the sample todo app?** — *a clean app gives the scanners nothing to find. a pipeline reporting "all clear" proves nothing. I wanted real findings.*
 -->
 
 ---
@@ -64,22 +61,15 @@ flowchart LR
 OpenTofu · OWASP NodeGoat from Artifact Registry · four GitHub Actions pipelines {.aside}
 
 <!--
-— solid arrows = how a user reaches it
-  internet → load balancer → ingress → the pods → Mongo on 27017
-— dotted = the two ways in nobody intended
-  SSH from anywhere · anonymous read on the backups
+- solid arrows = how a user reaches it internet → load balancer → ingress → the pods → Mongo on 27017
+- dotted = the two ways in nobody intended SSH from anywhere · anonymous read on the backups
 
-— red outline = deliberately weak, only two things here
+- red outline = deliberately weak, only two things here
 
-— and be clear about what ISN'T weak:
-  Mongo firewalled to the GKE ranges only · auth IS required ·
-  nodes are private · no credentials in the repo
-— otherwise this reads as uniformly careless. it's weak in five
-  specific places, on purpose.
+- and be clear about what ISN'T weak: Mongo firewalled to the GKE ranges only · auth IS required · nodes are private · no credentials in the repo
+- otherwise this reads as uniformly careless. it's weak in five specific places, on purpose.
 
-── IF ASKED ──
-why a VM for the database, not a managed service?
-  → the exercise asked for it, and it's the realistic shape — the VM
-    that predates the container platform. it also turns out to be the
-    part nothing scans, which comes up later.
+#### If asked
+
+- **why a VM for the database, not a managed service?** — *the exercise asked for it, and it's the realistic shape — the VM that predates the container platform. it also turns out to be the part nothing scans, which comes up later.*
 -->

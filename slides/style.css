@@ -93,6 +93,58 @@
   height: auto;
 }
 
+/* --- presenter mode -------------------------------------------------- */
+
+/* Slidev ships three presenter layouts, cycled by the layout button in the
+ * presenter toolbar (persisted as localStorage "slidev-presenter-layout").
+ * Layout 2 already puts notes left with current + next stacked on the right —
+ * but it pins the notes column to --slidev-presenter-notes-width (360px) and
+ * gives the slides the 1fr. For a talk-track deck that is backwards: the notes
+ * are what is being read, the slides are a reminder of what the room sees.
+ *
+ * So flip which column gets the free space. Press the layout button until it
+ * reads 2.
+ *
+ * !important because the component's own rule is scoped ([data-v-*]), which
+ * ties on specificity — load order would otherwise decide it.
+ */
+.slidev-presenter .grid-container.layout2 {
+  grid-template-columns: minmax(0, 1fr) var(--slidev-presenter-slides-width) !important;
+}
+
+.slidev-presenter .grid-container {
+  /* Width of the current/next column in layout 2. Big enough to read the
+     slide at a glance, small enough that the notes dominate. */
+  --slidev-presenter-slides-width: 30vw;
+}
+
+/* The notes pane is the thing being read from three feet away. */
+.slidev-presenter .slidev-note {
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.slidev-presenter .slidev-note ul {
+  margin: 0.4rem 0;
+}
+
+.slidev-presenter .slidev-note li {
+  margin: 0.3rem 0;
+}
+
+/* "If asked" sub-heading — present but quiet, so the eye skips it while
+   speaking and finds it when needed. */
+.slidev-presenter .slidev-note h4 {
+  margin: 1.1rem 0 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid currentColor;
+  border-color: color-mix(in srgb, currentColor 20%, transparent);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
 /* --- tables ---------------------------------------------------------- */
 
 .slidev-layout table {
