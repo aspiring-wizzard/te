@@ -1,0 +1,22 @@
+{
+  "name": "wiz-te-slides",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Slidev deck for the Wiz Principal Solutions Engineer technical exercise.",
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build",
+    "export": "slidev export --output wiz-technical-exercise.pdf"
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.19.0",
+    "@slidev/theme-default": "^0.25.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.62.1"
+  }
+}

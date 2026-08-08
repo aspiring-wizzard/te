@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+#   cp terraform.tfvars.example terraform.tfvars
+
+project_id = "your-cloudlabs-project-id"
+
+# europe-west1 (Belgium) — cheapest EU region, full coverage for everything used here.
+region = "europe-west1"
+zone   = "europe-west1-b"
+
+# Your public IP, so kubectl can reach the GKE control plane: curl -s ifconfig.me
+# Must match the network you present from on demo day — a VPN or a change of
+# site will lock kubectl out mid-demo. Re-check on the morning, it is one apply.
+admin_cidr = "1.2.3.4/32"
+
+# Optional extra sources (VPN egress, a second site). Empty by default.
+# extra_admin_cidrs = [
+#   { cidr = "203.0.113.7/32", name = "vpn-egress" },
+# ]
+
+mongo_password = "change-me"
+
+# Org-policy preventative control. Leave false unless the sandbox grants org permissions.
+enable_org_policy = false

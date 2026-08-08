@@ -1,0 +1,259 @@
+# Pipeline 1 of 4 — Infrastructure as Code.
+# Exercise: "One CI/CD pipeline to securely deploy this exercise as Infrastructure-as-Code"
+#           + "scanning the IaC code ... prior to deployment".
+#
+# Security controls in this pipeline:
+#   • Keyless auth to GCP via Workload Identity Federation (no long-lived SA key in secrets)
+#   • Least-privilege GITHUB_TOKEN (read-only by default, escalated per-job)
+#   • IaC scanning (Checkov + Trivy config) BEFORE any apply — this is the gate
+#   • Findings uploaded as SARIF → GitHub code scanning
+#   • apply only on main / manual dispatch, never from a PR
+name: iac
+
+on:
+  pull_request:
+    paths: ["terraform/**", ".github/workflows/iac.yml"]
+  push:
+    branches: [main]
+    # The workflow file itself is included deliberately: a change to the
+    # pipeline should re-run the pipeline. Without it, a fix to this file is
+    # never exercised on main and the last red run stays the visible status —
+    # which is exactly what happened when the SARIF paths were corrected.
+    paths: ["terraform/**", ".github/workflows/iac.yml"]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "plan or apply"
+        required: true
+        default: plan
+        type: choice
+        options: [plan, apply]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Is there a cloud credential to use at all?
+  #
+  # Without this, a clone with no secrets configured fails RED on every push —
+  # the jobs try to authenticate and error. That trains people to ignore red,
+  # which is the single most expensive failure mode a pipeline can have: a gate
+  # nobody trusts is a gate nobody reads.
+  #
+  # So the cloud jobs are gated and show as SKIPPED instead. Scanning — the part
+  # that needs no credentials and carries the AppSec value — always runs.
+  #
+  # It has to be a job output: the `secrets` context is NOT available in a
+  # job-level `if:`, so the check cannot be inlined there.
+  # ---------------------------------------------------------------------------
+  preflight:
+    name: cloud credentials present?
+    runs-on: ubuntu-latest
+    outputs:
+      cloud: ${{ steps.check.outputs.cloud }}
+    steps:
+      - id: check
+        # This workflow sets defaults.run.working-directory: terraform, and this
+        # job deliberately does not check out — so without overriding it back to
+        # the workspace root, every run: step here dies trying to cd into a
+        # directory that does not exist.
+        working-directory: .
+        env:
+          WIF: ${{ secrets.GCP_WIF_PROVIDER }}
+        run: |
+          if [ -n "${WIF}" ]; then
+            echo "cloud=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cloud=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Cloud jobs skipped::GCP_WIF_PROVIDER is not set, so plan/apply are skipped. IaC scanning still runs."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Gate: static analysis of the IaC. Runs before anything touches the cloud.
+  # This is the step the Wiz Code narrative maps onto — Wiz would surface these
+  # findings in the pull request, with cloud context attached.
+  # ---------------------------------------------------------------------------
+  scan:
+    name: validate + scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload SARIF
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.12.5"
+
+      - name: tofu fmt
+        run: tofu fmt -check -recursive
+
+      - name: tofu init (no backend)
+        run: tofu init -backend=false -input=false
+
+      - name: tofu validate
+        run: tofu validate
+
+      - name: Checkov (IaC misconfiguration scan)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          # NOTE: this environment is INTENTIONALLY vulnerable, so Checkov will
+          # (correctly) report the planted weaknesses. soft_fail keeps the
+          # pipeline green while still publishing findings — the findings are
+          # the deliverable here, not a reason to block.
+          soft_fail: true
+
+      - name: Trivy (IaC config scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: terraform
+          format: sarif
+          output: trivy-iac.sarif
+          exit-code: "0"
+
+      - name: Upload Checkov SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        # Code scanning ingests SARIF only where GitHub Advanced Security is
+        # available — public repos, or private with GHAS. On a free private repo
+        # this 403s and posts a red annotation even when the scan passed, so it is
+        # skipped rather than tolerated: findings live in the job log and in the
+        # uploaded artefacts, and only the rendering is gated.
+        # checkov-action is a CONTAINER action: it does not honour
+        # defaults.run.working-directory, so it writes to the workspace root,
+        # not terraform/. hashFiles() guards the path so a missing report skips
+        # the upload rather than failing the job red.
+        if: ${{ !github.event.repository.private && hashFiles('checkov.sarif') != '' }}
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        # Code scanning ingests SARIF only where GitHub Advanced Security is
+        # available — public repos, or private with GHAS. On a free private repo
+        # this 403s and posts a red annotation even when the scan passed, so it is
+        # skipped rather than tolerated: findings live in the job log and in the
+        # uploaded artefacts, and only the rendering is gated.
+        # Same as Checkov above: trivy-action writes relative to the workspace
+        # root regardless of defaults.run.working-directory.
+        if: ${{ !github.event.repository.private && hashFiles('trivy-iac.sarif') != '' }}
+        with:
+          sarif_file: trivy-iac.sarif
+          category: trivy-iac
+
+  # ---------------------------------------------------------------------------
+  # Plan on PRs, apply only from main or an explicit manual run.
+  # ---------------------------------------------------------------------------
+  plan:
+    name: plan
+    needs: [scan, preflight]
+    if: needs.preflight.outputs.cloud == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for Workload Identity Federation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.12.5"
+
+      # Remote state: without this, state (which contains the resolved
+      # mongo_password in plaintext) would live on this ephemeral runner.
+      - name: tofu init (remote state)
+        run: |
+          tofu init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=wizex"
+
+      # No secret is passed in: Terraform generates the Mongo password itself
+      # (random_password -> Secret Manager), so these are identifiers only.
+      #
+      # Plan to a FILE. That artefact is what a human approves and what the apply
+      # job consumes, so the plan applied is byte-for-byte the plan reviewed.
+      # `tofu apply` with no saved plan re-plans, and could ship something other
+      # than what was approved.
+      - name: tofu plan
+        run: tofu plan -out=tfplan -input=false -no-color -lock-timeout=5m
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_admin_cidr: ${{ secrets.ADMIN_CIDR }}
+
+      # Readable summary in the job log and the PR, without opening the binary plan.
+      - name: Plan summary
+        run: |
+          tofu show -no-color tfplan | tee plan.txt | tail -40
+          {
+            echo '### OpenTofu plan'
+            echo '```'
+            tofu show -no-color tfplan | grep -E '^(Plan:|No changes)' || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ⚠️ A plan contains RESOLVED values, including the generated Mongo
+      # password. Short retention, and the repository is private.
+      - name: Upload plan artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: |
+            terraform/tfplan
+            terraform/plan.txt
+          retention-days: 5
+
+  apply:
+    name: apply
+    needs: [scan, plan, preflight]
+    if: needs.preflight.outputs.cloud == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.action == 'apply')
+    runs-on: ubuntu-latest
+    environment: lab # manual approval gate
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.12.5"
+
+      - name: tofu init (remote state)
+        run: |
+          tofu init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=wizex"
+
+      # Fetch the exact plan the plan job produced and the reviewer approved.
+      - name: Download the approved plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: terraform
+
+      # No -auto-approve and no TF_VAR_*: applying a saved plan needs neither.
+      # The plan file already carries every resolved value, which is the point —
+      # nothing can differ between what was reviewed and what is applied.
+      - name: tofu apply (the approved plan)
+        run: tofu apply -input=false -lock-timeout=5m tfplan

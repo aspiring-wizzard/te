@@ -1,0 +1,31 @@
+# 🔴 INTENTIONAL WEAKNESS #5 — the application pod runs as cluster-admin.
+# Attack-path role: a single compromised pod (NodeGoat is deliberately vulnerable)
+# escalates to full control of the Kubernetes cluster.
+# Exercise requirement: "Container application must be assigned a cluster-wide
+# kubernetes admin role and privilege."
+#
+# Demo this live:
+#   kubectl exec deploy/nodegoat -- \
+#     sh -c 'apt-get install -y curl >/dev/null 2>&1; \
+#            TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); \
+#            curl -sk -H "Authorization: Bearer $TOKEN" \
+#              https://kubernetes.default.svc/api/v1/secrets | head'
+# ...i.e. the app can read every Secret in the cluster.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nodegoat
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nodegoat-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: nodegoat
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io

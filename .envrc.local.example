@@ -1,0 +1,16 @@
+# Copy to .envrc.local (gitignored) for machine-local overrides.
+#
+#   cp .envrc.local.example .envrc.local && direnv allow
+
+# Your public IP, gating GKE control-plane access. Set it explicitly rather than
+# auto-detecting: check with `just myip`, and re-check on the morning of the panel.
+export ADMIN_CIDR="1.2.3.4/32"
+
+# Name baked into wizexercise.txt at build time. REQUIRED by `just build`, which
+# generates app/wizexercise.txt (gitignored) from it — so the image carries the
+# name and the repository never does. Not a secret; simply not the repo's business.
+export WIZ_EXERCISE_NAME="Your Name"
+
+# Different sandbox or region:
+# export GCP_PROJECT="another-project"
+# export GCP_REGION="us-central1"

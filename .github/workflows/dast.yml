@@ -1,0 +1,41 @@
+# Pipeline 4 of 4 — DAST against the running application.
+#
+# SAST reasons about code; SCA about dependencies; DAST is the only one that
+# tests what is actually deployed and reachable. It runs on demand because it
+# needs a live target: the load balancer IP only exists after the app pipeline
+# has deployed (kubectl get ingress nodegoat).
+#
+#   gh workflow run dast.yml -f target=http://<LB_IP>
+name: dast
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Base URL of the deployed app (e.g. http://34.1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # ZAP action files findings as an issue
+    steps:
+      - uses: actions/checkout@v4
+
+      # Baseline = passive spider + passive rules. Deliberately NOT the full
+      # active scan: this is a deliberately vulnerable app and an active scan
+      # would attack it destructively. Baseline proves the control works and
+      # keeps the demo environment intact.
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ inputs.target }}
+          cmd_options: "-a"
+          fail_action: false

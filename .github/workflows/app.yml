@@ -1,0 +1,195 @@
+# Pipeline 2 of 4 — application container.
+# Exercise: "One CI/CD pipeline to build & push the application as a container to a
+#            registry and trigger a Kubernetes deployment of the container image"
+#           + "scanning the ... Container Image prior to deployment".
+#
+# Flow: build → SCAN (the gate) → push → deploy → verify
+# The scan runs BEFORE the push, so a failing image never reaches the registry
+# or the cluster. This is the "shift left" moment to narrate: Wiz Code would
+# surface the same findings in the PR, enriched with cloud context (is this
+# image actually running, internet-exposed, and over-privileged in prod?).
+name: app
+
+on:
+  pull_request:
+    paths: ["app/**", "k8s/**", ".github/workflows/app.yml"]
+  push:
+    branches: [main]
+    # Include the workflow itself: a change to the pipeline should re-run it,
+    # otherwise a fix here is never exercised on main and the last red run
+    # remains the visible status.
+    paths: ["app/**", "k8s/**", ".github/workflows/app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGION: europe-west1
+  REPO: app
+  IMAGE: nodegoat
+  CLUSTER: wizex-gke
+  ZONE: europe-west1-b
+
+jobs:
+  # Is there a cloud credential to use? Without this, a clone with no secrets
+  # configured fails RED on every push, which trains people to ignore red. The
+  # cloud job is gated and shows as SKIPPED instead; build + image scanning,
+  # which need no credentials, always run. Must be a job output — the `secrets`
+  # context is not available in a job-level `if:`.
+  preflight:
+    name: cloud credentials present?
+    runs-on: ubuntu-latest
+    outputs:
+      cloud: ${{ steps.check.outputs.cloud }}
+    steps:
+      - id: check
+        env:
+          WIF: ${{ secrets.GCP_WIF_PROVIDER }}
+        run: |
+          if [ -n "${WIF}" ]; then
+            echo "cloud=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cloud=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Deploy skipped::GCP_WIF_PROVIDER is not set, so push/deploy is skipped. Build and image scanning still run."
+          fi
+
+  build-scan:
+    name: build + scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # wizexercise.txt is generated, never committed: it carries a real name,
+      # which belongs in the IMAGE but not in a public repository (see
+      # .gitignore). Locally `just build` writes it from WIZ_EXERCISE_NAME;
+      # here it comes from the repository variable of the same name, which is
+      # visible to collaborators but not to the public. The fallback keeps a
+      # fork with no variable set building rather than failing on COPY.
+      # Deliberately a SECRET, not a variable, and deliberately never echoed.
+      # This repository is public, so its Actions logs are public. GitHub masks
+      # secrets in logs as ***; repository VARIABLES are not masked at all and
+      # are printed verbatim in the step's env: group. A `cat` of the file would
+      # publish the name just as effectively.
+      - name: Materialise wizexercise.txt
+        working-directory: app
+        env:
+          NAME: ${{ secrets.WIZ_EXERCISE_NAME }}
+        run: |
+          printf '%s\nWiz Technical Exercise — Principal Solutions Engineer, Application Security (Germany)\n' \
+            "${NAME:-WIZ_EXERCISE_NAME secret is not set}" > wizexercise.txt
+          echo "wizexercise.txt written: $(wc -c < wizexercise.txt) bytes"
+
+      - name: Build image
+        working-directory: app
+        run: docker build -t "${IMAGE}:${{ github.sha }}" .
+
+      # Proof the exercise asks for: the required file is IN the image.
+      - name: Verify wizexercise.txt is baked into the image
+        run: |
+          # Assert the layer is present and non-empty WITHOUT printing it: the
+          # logs of a public repository are public. The live walkthrough proves
+          # the contents with `kubectl exec` against the running pod, which is
+          # what the exercise actually asks for; CI only needs to prove the file
+          # shipped inside the image.
+          bytes=$(docker run --rm "${IMAGE}:${{ github.sha }}" stat -c %s /app/wizexercise.txt)
+          echo "wizexercise.txt present in image: ${bytes} bytes"
+          test "${bytes}" -gt 0
+
+      # ---- THE GATE -------------------------------------------------------
+      # NodeGoat is deliberately vulnerable, so this scan finds real CVEs.
+      # exit-code 0 keeps the lab pipeline green while still publishing findings;
+      # in a production pipeline this would be exit-code 1 on CRITICAL.
+      - name: Trivy image scan (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
+      - name: Trivy image scan (console summary for the demo)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
+      - name: Upload image-scan SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        # Code scanning ingests SARIF only where GitHub Advanced Security is
+        # available — public repos, or private with GHAS. On a free private repo
+        # this 403s and posts a red annotation even when the scan passed, so it is
+        # skipped rather than tolerated: findings live in the job log and in the
+        # uploaded artefacts, and only the rendering is gated.
+        if: ${{ !github.event.repository.private }}
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+  push-deploy:
+    name: push + deploy
+    needs: [build-scan, preflight]
+    if: needs.preflight.outputs.cloud == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: lab
+    permissions:
+      contents: read
+      id-token: write # Workload Identity Federation — no static keys
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build + push
+        working-directory: app
+        run: |
+          IMG="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}:${{ github.sha }}"
+          docker build -t "$IMG" .
+          docker push "$IMG"
+          echo "IMG=$IMG" >> "$GITHUB_ENV"
+
+      - name: Get cluster credentials
+        run: |
+          gcloud container clusters get-credentials "${CLUSTER}" \
+            --zone "${ZONE}" --project "${{ secrets.GCP_PROJECT_ID }}"
+
+      # The credential is never in the repo. Terraform generated it and stored it
+      # in Secret Manager; it is read at deploy time and never written to disk.
+      - name: Create MongoDB credential Secret from Secret Manager
+        run: |
+          kubectl create secret generic mongo-credentials \
+            --from-literal=uri="$(gcloud secrets versions access latest --secret=wizex-mongo-uri)" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to GKE
+        run: |
+          sed -i "s|REGION-docker.pkg.dev/PROJECT/app/nodegoat:v1|${IMG}|g" k8s/*.yaml
+          kubectl apply -f k8s/00-rbac.yaml
+          kubectl apply -f k8s/10-deployment.yaml
+          kubectl apply -f k8s/20-service-ingress.yaml
+          kubectl rollout status deploy/nodegoat --timeout=180s
+
+      # Prove it in the cluster, not just in the build — again without printing
+      # the contents into a public Actions log. Dormant while the cloud jobs are
+      # gated off, which is exactly why it is worth fixing now: it would have
+      # started leaking silently the day Workload Identity Federation was wired
+      # up, long after anyone remembered why the file was redacted.
+      - name: Verify wizexercise.txt in the running pod
+        run: |
+          bytes=$(kubectl exec deploy/nodegoat -- stat -c %s /app/wizexercise.txt)
+          echo "wizexercise.txt present in running pod: ${bytes} bytes"
+          test "${bytes}" -gt 0

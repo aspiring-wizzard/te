@@ -1,0 +1,57 @@
+# Exercise requirement: "exposed via a Kubernetes ingress and CSP load balancer."
+# GKE's ingress controller provisions a Google Cloud HTTP(S) Load Balancer and
+# requires a NodePort service behind it.
+#
+# Health-check note (cost me a rollout): this cluster uses container-native load
+# balancing, so pods carry the NEG readiness gate
+# `cloud.google.com/load-balancer-neg-ready`. A pod stays NotReady — even with a
+# healthy container — until the GOOGLE CLOUD health check passes.
+#
+# Kubelet probes and GCE health checks do not agree on what "healthy" means:
+# a kubelet httpGet probe accepts any 2xx OR 3xx, but a GCE health check
+# requires a strict 200 and does not follow redirects. NodeGoat's "/" returns
+# 302 → /login, so the default check on "/" passed the kubelet and failed GCE
+# forever. Hence an explicit BackendConfig pointing at a path that returns 200.
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: nodegoat
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: /login # returns 200; "/" returns 302 and fails GCE checks
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodegoat
+  labels:
+    app: nodegoat
+  annotations:
+    cloud.google.com/backend-config: '{"default": "nodegoat"}'
+spec:
+  type: NodePort
+  selector:
+    app: nodegoat
+  ports:
+    - port: 80
+      targetPort: 4000
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nodegoat
+  annotations:
+    kubernetes.io/ingress.class: "gce" # → Google Cloud HTTP(S) Load Balancer
+spec:
+  defaultBackend:
+    service:
+      name: nodegoat
+      port:
+        number: 80

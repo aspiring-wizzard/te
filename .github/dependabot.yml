@@ -1,0 +1,25 @@
+# Supply-chain hygiene for the pipeline itself: keep Actions and base images current.
+# (The *application's* dependencies are deliberately vulnerable — that is the point —
+# so npm is intentionally not managed here.)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: "/app"
+    schedule:
+      interval: weekly
+    ignore:
+      # node:16-bullseye is EOL ON PURPOSE — it is what makes the container scan
+      # return real OS and dependency CVEs instead of "all clear", which is the
+      # whole point of intentional weakness #3. Dependabot immediately opened
+      # "bump node from 16-bullseye to 25-bullseye"; merging it would delete the
+      # finding the pipeline exists to demonstrate.
+      #
+      # Kept as an explicit ignore rather than by dropping the docker ecosystem,
+      # so the *other* images here stay managed and the exception is visible and
+      # justified rather than silent.
+      - dependency-name: "node"

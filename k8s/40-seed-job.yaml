@@ -1,0 +1,21 @@
+# One-shot seed so the app has data — proves "the data is in the database".
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nodegoat-seed
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: europe-west1-docker.pkg.dev/clgcporg10-152/app/nodegoat:v1 # replaced at deploy time
+          imagePullPolicy: Always # same reason as the Deployment — the tag is mutable
+          command: ["npm", "run", "db:seed"]
+          env:
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-credentials
+                  key: uri

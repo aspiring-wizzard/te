@@ -1,0 +1,4 @@
+# Copy to backend.hcl (gitignored) and use:
+#   tofu init -backend-config=backend.hcl
+bucket = "tfstate-your-cloudlabs-project-id"
+prefix = "wizex"

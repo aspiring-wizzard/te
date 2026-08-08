@@ -1,0 +1,137 @@
+#!/bin/bash
+set -euxo pipefail
+
+# Rendered by OpenTofu/Terraform via templatefile().
+# Bash variables are escaped with a doubled dollar so they survive templating;
+# single-dollar interpolations are substituted at render time.
+
+# ---------------------------------------------------------------------------
+# 🔴 INTENTIONAL WEAKNESS #3 — MongoDB ${mongo_version}, end-of-life since
+# October 2024: unsupported and no longer receiving security fixes.
+# Access is still restricted to the GKE subnet by firewall, and auth IS required
+# (both are explicit exercise requirements).
+#
+# The version is not a free choice — see var.mongo_version. NodeGoat's ancient
+# driver speaks OP_QUERY, which MongoDB removed in 5.1, so anything newer than
+# 5.0 breaks every query the application makes.
+# ---------------------------------------------------------------------------
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y gnupg curl
+
+curl -fsSL "https://pgp.mongodb.com/server-${mongo_version}.asc" \
+  | gpg -o "/usr/share/keyrings/mongodb-server-${mongo_version}.gpg" --dearmor
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${mongo_version}.gpg ] https://repo.mongodb.org/apt/ubuntu ${apt_suite}/mongodb-org/${mongo_version} multiverse" \
+  > "/etc/apt/sources.list.d/mongodb-org-${mongo_version}.list"
+
+apt-get update
+# mongodb-mongosh is NOT pulled in by the mongodb-org metapackage on the 5.0
+# series — that still ships the legacy `mongo` shell. Everything below uses
+# mongosh, so ask for it by name rather than inheriting it by luck.
+apt-get install -y mongodb-org mongodb-mongosh
+
+# Pin the series so an unattended `apt-get upgrade` cannot silently move the
+# database past 5.0 and break every query the application makes.
+apt-mark hold mongodb-org mongodb-org-server mongodb-org-mongos mongodb-org-tools || true
+
+# The April-2020 base image predates gsutil being present by default, and the
+# backup below is an exercise requirement — so make the dependency explicit
+# instead of discovering it missing when the first backup silently fails.
+if ! command -v gsutil >/dev/null 2>&1; then
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+    | gpg -o /usr/share/keyrings/cloud.google.gpg --dearmor
+  echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
+    > /etc/apt/sources.list.d/google-cloud-sdk.list
+  apt-get update
+  apt-get install -y google-cloud-cli
+fi
+
+# ---------------------------------------------------------------------------
+# Order matters: create the user FIRST, with auth still off, then enable auth.
+#
+# The obvious alternative — enable auth, then use MongoDB's localhost exception
+# to create the first user — does not work reliably: the exception refuses
+# createUser here ("not authorized on admin to execute command { createUser ... }"),
+# and any guard that probes first (getUser/usersInfo) is refused too. Creating
+# the user before auth is enabled sidesteps the exception entirely and is
+# deterministic.
+#
+# Safe window: mongod is still on its default bindIp (127.0.0.1) at this point,
+# so it is unreachable from the network while it has no credentials. Only after
+# the user exists do we open bindIp AND require authentication, in the same
+# restart.
+# ---------------------------------------------------------------------------
+systemctl enable mongod
+systemctl restart mongod
+
+for _ in $(seq 1 30); do
+  if mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; then break; fi
+  sleep 2
+done
+
+mongosh --quiet <<'EOF_JS'
+const admin = db.getSiblingDB("admin");
+try {
+  admin.createUser({
+    user: "${mongo_user}",
+    pwd:  "${mongo_password}",
+    roles: [
+      { role: "readWrite", db: "${mongo_db}" },
+      { role: "dbAdmin",   db: "${mongo_db}" }
+    ]
+  });
+  print("created user ${mongo_user}");
+} catch (e) {
+  if (/already exists/i.test(e.message)) {
+    print("user ${mongo_user} already exists");
+  } else {
+    print("FAILED to create user: " + e.message);
+    quit(1);
+  }
+}
+EOF_JS
+
+# Now open the bind address AND require authentication, together.
+sed -i 's/^\( *bindIp:\).*/\1 0.0.0.0/' /etc/mongod.conf
+if ! grep -q '^security:' /etc/mongod.conf; then
+  printf '\nsecurity:\n  authorization: enabled\n' >> /etc/mongod.conf
+fi
+systemctl restart mongod
+
+for _ in $(seq 1 30); do
+  if mongosh --quiet -u "${mongo_user}" -p "${mongo_password}" --authenticationDatabase admin \
+       --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; then break; fi
+  sleep 2
+done
+
+# Prove the credential works before anything depends on it — otherwise the first
+# symptom is a backup failing minutes later, or the app failing to connect long
+# after the VM reported success.
+mongosh --quiet -u "${mongo_user}" -p "${mongo_password}" --authenticationDatabase admin \
+  --eval 'db.adminCommand({ ping: 1 })' > /dev/null
+echo "auth verified for ${mongo_user}"
+
+# ---------------------------------------------------------------------------
+# ✅ REQUIRED — daily automated backup to the (publicly readable) bucket.
+# ---------------------------------------------------------------------------
+cat > /usr/local/bin/mongo-backup.sh <<'EOF_SH'
+#!/bin/bash
+set -euo pipefail
+STAMP=$(date +%F-%H%M)
+ARCHIVE="/tmp/mongodump-$${STAMP}.gz"
+mongodump --archive="$${ARCHIVE}" --gzip \
+  --username="__MONGO_USER__" --password="__MONGO_PASSWORD__" --authenticationDatabase=admin
+gsutil cp "$${ARCHIVE}" "gs://__BACKUP_BUCKET__/backups/"
+rm -f "$${ARCHIVE}"
+EOF_SH
+
+sed -i "s|__MONGO_USER__|${mongo_user}|g;s|__MONGO_PASSWORD__|${mongo_password}|g;s|__BACKUP_BUCKET__|${backup_bucket}|g" \
+  /usr/local/bin/mongo-backup.sh
+chmod 700 /usr/local/bin/mongo-backup.sh
+
+# Daily at 02:00, plus one immediate run so the demo has an object to show.
+echo "0 2 * * * root /usr/local/bin/mongo-backup.sh >> /var/log/mongo-backup.log 2>&1" \
+  > /etc/cron.d/mongo-backup
+chmod 644 /etc/cron.d/mongo-backup
+
+/usr/local/bin/mongo-backup.sh >> /var/log/mongo-backup.log 2>&1 || true

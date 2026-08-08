@@ -1,0 +1,182 @@
+# Pipeline 3 of 4 — Application Security (shift-left gate).
+#
+# The other pipelines secure the *infrastructure* and the *image*. This one
+# secures the *application and its supply chain*, which is the part an AppSec
+# programme actually owns:
+#
+#   secrets  -> gitleaks   (credentials in source or history)
+#   SAST     -> Semgrep    (code flaws: injection, XSS, SSRF, deserialisation)
+#   SCA      -> Trivy fs   (vulnerable dependencies, at source, in the PR)
+#   SBOM     -> CycloneDX  (what shipped — so the next Log4Shell is a query)
+#
+# NodeGoat's source is fetched here rather than vendored, so the repo stays
+# small. In a real programme the application source IS the repository and these
+# jobs run against it directly — the controls are identical either way.
+name: appsec
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODEGOAT_REF: master
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Secrets — the cheapest control with the worst failure mode if missing.
+  # Scans working tree AND git history: a rotated-but-committed credential is
+  # still a leaked credential.
+  # ---------------------------------------------------------------------------
+  secrets:
+    name: secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required by upload-sarif below. The sast and sca jobs already declare
+      # it; this one did not, and the omission was INVISIBLE on a private repo
+      # because the upload step is gated off there. It would have surfaced as a
+      # 403 on the first push after going public — the failure mode of a
+      # permission you only exercise in one visibility mode.
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history
+
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --redact --verbose \
+            --report-format sarif --report-path /repo/gitleaks.sarif \
+          || echo "findings reported (see summary below)"
+
+      - name: gitleaks findings (readable)
+        if: always()
+        run: |
+          test -s gitleaks.sarif || { echo 'no SARIF produced'; exit 0; }
+          jq -r '.runs[0].results // [] | "gitleaks: \(length) finding(s)"' gitleaks.sarif
+          jq -r '.runs[0].results // [] | .[] | "  \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine // "?")  \(.ruleId)"' gitleaks.sarif | head -25
+
+      - uses: github/codeql-action/upload-sarif@v3
+        # Code scanning ingests SARIF only where GitHub Advanced Security is
+        # available — public repos, or private with GHAS. On a free private repo
+        # this 403s and posts a red annotation even when the scan passed, so it is
+        # skipped rather than tolerated: findings live in the job log and in the
+        # uploaded artefacts, and only the rendering is gated.
+        if: ${{ !github.event.repository.private }}
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+
+  # ---------------------------------------------------------------------------
+  # SAST — analyses the application SOURCE for code-level flaws. Image scanning
+  # cannot do this: it finds vulnerable *packages*, not vulnerable *code*.
+  # NodeGoat is built to fail these rules, so the output is real, not synthetic.
+  # ---------------------------------------------------------------------------
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    container: semgrep/semgrep
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch application source
+        run: git clone --depth 1 --branch "$NODEGOAT_REF" https://github.com/OWASP/NodeGoat.git /tmp/app
+
+      - name: Semgrep scan (OWASP Top Ten + JavaScript rulesets)
+        run: |
+          semgrep scan /tmp/app \
+            --config=p/owasp-top-ten \
+            --config=p/javascript \
+            --sarif --output=semgrep.sarif \
+            --metrics=off || true
+
+      # The evidence a reviewer actually reads. SARIF is for tooling; this is
+      # for the job log and for the demo.
+      - name: Semgrep findings (readable)
+        run: |
+          semgrep scan /tmp/app --config=p/owasp-top-ten --config=p/javascript \
+            --metrics=off --max-lines-per-finding=3 || true
+
+      - uses: github/codeql-action/upload-sarif@v3
+        # Code scanning ingests SARIF only where GitHub Advanced Security is
+        # available — public repos, or private with GHAS. On a free private repo
+        # this 403s and posts a red annotation even when the scan passed, so it is
+        # skipped rather than tolerated: findings live in the job log and in the
+        # uploaded artefacts, and only the rendering is gated.
+        if: ${{ !github.event.repository.private }}
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  # ---------------------------------------------------------------------------
+  # SCA + SBOM — dependency vulnerabilities at SOURCE level, so a developer sees
+  # them in the pull request rather than after a build. The SBOM is the artefact
+  # that makes "are we affected?" a query instead of an excavation.
+  # ---------------------------------------------------------------------------
+  sca:
+    name: SCA + SBOM (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch application source
+        run: git clone --depth 1 --branch "$NODEGOAT_REF" https://github.com/OWASP/NodeGoat.git app-src
+
+      - name: Trivy filesystem scan (dependencies)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: app-src
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: app-src
+          format: cyclonedx
+          output: sbom.cdx.json
+
+      - uses: github/codeql-action/upload-sarif@v3
+        # Code scanning ingests SARIF only where GitHub Advanced Security is
+        # available — public repos, or private with GHAS. On a free private repo
+        # this 403s and posts a red annotation even when the scan passed, so it is
+        # skipped rather than tolerated: findings live in the job log and in the
+        # uploaded artefacts, and only the rendering is gated.
+        if: ${{ !github.event.repository.private }}
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+      - name: Publish SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          retention-days: 30
+
+      - name: Publish findings as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appsec-findings-${{ github.sha }}
+          path: |
+            **/*.sarif
+            **/sbom.cdx.json
+          if-no-files-found: ignore
+          retention-days: 14
