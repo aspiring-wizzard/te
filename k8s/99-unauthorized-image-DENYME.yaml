@@ -1,0 +1,24 @@
+# Demo prop for BINARY AUTHORIZATION (the native cloud preventative control).
+#
+# This pod is deliberately BORING: not privileged, no odd RBAC, nothing
+# Gatekeeper would object to. Its only sin is that its image is not on the
+# Binary Authorization allowlist (security-binauthz.tf). So the GKE control
+# plane itself refuses to admit it:
+#
+#   kubectl apply -f 99-unauthorized-image-DENYME.yaml
+#   → Error from server (FORBIDDEN): ... Image nginx:stable denied by Binary
+#     Authorization default admission rule. Denied by always_deny admission rule
+#
+# The contrast with the Gatekeeper prop is the point: two preventative controls,
+# two different questions. Gatekeeper asks "is this workload configured safely?"
+# Binary Authorization asks "are we allowed to run this image at all?" — and the
+# second is enforced by the cloud provider, not by anything running in the
+# cluster.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unauthorized-image
+spec:
+  containers:
+    - name: nginx
+      image: nginx:stable

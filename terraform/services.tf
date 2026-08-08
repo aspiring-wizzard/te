@@ -21,6 +21,8 @@ locals {
     "cloudresourcemanager.googleapis.com",
     "iam.googleapis.com",
     "secretmanager.googleapis.com",
+    "binaryauthorization.googleapis.com", # native preventative admission control
+    "containeranalysis.googleapis.com",   # backs Binary Authorization + posture
   ]
 }
 

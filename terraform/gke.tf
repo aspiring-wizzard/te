@@ -41,6 +41,30 @@ resource "google_container_cluster" "gke" {
       }
     }
   }
+
+  # 🛡️ NATIVE DETECTIVE — GKE Security Posture.
+  # GCP-native, project-scoped detection of workload misconfiguration and image
+  # vulnerabilities. This is the answer to "native CSP tooling to detect the
+  # misconfigurations" in a sandbox where Security Command Center is denied at
+  # the organisation: BASIC audits workload config (privileged, runAsRoot,
+  # missing limits, over-broad RBAC); VULNERABILITY_BASIC adds CVE scanning of
+  # the images actually running. Findings surface in the GKE Security Posture
+  # dashboard and Cloud Logging — no agent, nothing installed.
+  security_posture_config {
+    mode               = "BASIC"
+    vulnerability_mode = "VULNERABILITY_BASIC"
+  }
+
+  # 🛡️ NATIVE PREVENTATIVE — Binary Authorization.
+  # Admission control enforced by the GKE CONTROL PLANE itself, not a pod we
+  # installed. Only images allowed by the project policy (security-binauthz.tf)
+  # may run. This is the CSP-native counterpart to the Gatekeeper constraint —
+  # same "reject a new bad action, live" demo, one layer down and vendor-native,
+  # which removes any doubt about whether the preventative control is a *cloud*
+  # control or a Kubernetes one.
+  binary_authorization {
+    evaluation_mode = "PROJECT_SINGLETON_POLICY_ENFORCE"
+  }
 }
 
 resource "google_container_node_pool" "primary" {

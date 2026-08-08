@@ -20,11 +20,11 @@ Trivy image · CycloneDX SBOM · Checkov · **EOL check**
 
 ### 3 · Deploy
 
-Pull-request flow · Gatekeeper admission
+Pull-request flow · Binary Authorization · Gatekeeper
 
 ### 4 · Run
 
-ZAP · log-based alert · Cloud Audit Logs
+ZAP · GKE Security Posture · log-based alert · Cloud Audit Logs
 
 Branch protection and environment approvals need a public or Pro repo — declared, not enforced {.aside}
 

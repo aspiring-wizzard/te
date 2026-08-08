@@ -273,10 +273,26 @@ demo-public-bucket:
 demo-eol:
     @python3 scripts/check-eol.py
 
-# The preventative control rejects a NEW privileged pod
+# Gatekeeper (Kubernetes admission) rejects a NEW privileged pod
 demo-prevent:
     -kubectl apply -f k8s/99-privileged-pod-DENYME.yaml
     @printf '\n(expected: rejected by the Gatekeeper constraint)\n'
+
+# The image is the allowlisted app image, so Binary Authorization admits it and
+# Gatekeeper is unambiguously the control doing the rejecting.
+
+# Binary Authorization (GKE control plane) rejects a NEW unauthorised image
+demo-binauthz:
+    -kubectl apply -f k8s/99-unauthorized-image-DENYME.yaml
+    @printf '\n(expected: rejected by the Binary Authorization default deny rule —\n a NATIVE cloud control, enforced by the control plane, not a pod we installed)\n'
+
+# GKE Security Posture — native, project-scoped misconfiguration + CVE detection
+demo-posture:
+    @printf 'GKE Security Posture dashboard (native misconfiguration + vuln findings):\n'
+    @printf '  https://console.cloud.google.com/kubernetes/security/dashboard?project=%s\n' "{{project}}"
+    @gcloud container clusters describe {{cluster}} --zone {{zone}} --project {{project}} \
+      --format='value(securityPostureConfig.mode,securityPostureConfig.vulnerabilityMode)' \
+      | xargs printf '  cluster posture: mode=%s  vuln=%s\n'
 
 # The load balancer address to open in a browser
 url:

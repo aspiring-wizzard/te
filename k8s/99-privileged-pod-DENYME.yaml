@@ -6,6 +6,12 @@
 #   → Error from server ([deny-privileged-containers] privileged container is
 #     not allowed: bad)
 #
+# The image is deliberately the ALLOWLISTED application image, not busybox, so
+# that Binary Authorization admits it and Gatekeeper is unambiguously the
+# control doing the rejecting. (An un-allowlisted image would be blocked first
+# by Binary Authorization — see 99-unauthorized-image-DENYME.yaml — which would
+# muddy which control fired.)
+#
 # Do NOT leave this running if it ever succeeds.
 apiVersion: v1
 kind: Pod
@@ -14,7 +20,7 @@ metadata:
 spec:
   containers:
     - name: bad
-      image: busybox:1.36
+      image: europe-west1-docker.pkg.dev/clgcporg10-152/app/nodegoat:v1
       command: ["sleep", "3600"]
       securityContext:
         privileged: true

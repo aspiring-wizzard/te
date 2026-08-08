@@ -96,7 +96,7 @@ layout: two-cols-header
 ### Knowingly traded away
 
 - **Pulumi** — lost to HCL's scanning ecosystem
-- **SHA-pin then sign** — cosign + Binary Authorization
+- **Image signing** — cosign attestations (Binary Auth enforces an allowlist today)
 - **Digest-pinned images** — not mutable tags
 
 ::right::
