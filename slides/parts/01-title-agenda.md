@@ -31,7 +31,7 @@ the walkthrough is the substance.
 - **The business case** — why this costs money before anyone is breached
 - **One attack path** — five findings, five owners, one chain
 - **How it is built** — the pipeline as the control plane
-- **What broke** — the four failures worth telling you about
+- **What broke** — the three failures worth telling you about
 - **Where Wiz changes the outcome**
 
 ~15 minutes here, then the live environment. {.aside}

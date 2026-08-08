@@ -10,12 +10,23 @@ Four things went wrong. These are the three worth your time. {.lede}
 - **An EOL database I could not patch** — because the *app* pinned it
 - **A control that ate the workload** — security is not free
 
-None of these were blockers. All of them were decisions. {.punch}
+One was the app's. Two were mine. {.punch}
 
 <!--
-Framing matters here: these are not confessions, they are the parts of the build
-where something was actually learned. A panel of engineers has debugged all
-three shapes of problem and will recognise them.
+Say the last line plainly and do not soften it. The deck previously claimed all
+of these were "decisions", and that was retrospective tidying: two of them were
+mistakes.
+
+The drift was mine — I built the wrong kind of security and only found it by
+going looking. Gatekeeper was mine — the manifest existed and the admission
+controller was never installed, which is not a trade-off, it is something I did
+not check. The EOL database is the one that genuinely was not a decision by
+anyone: it is a property of the application's dependency tree.
+
+A panel of engineers spots reframed mistakes instantly, and it would cost me the
+credibility the stories otherwise buy. These are not confessions either — they
+are the parts of the build where something was actually learned, and all three
+shapes will be familiar to anyone who has debugged a pipeline.
 
 The fourth, if anyone asks: an arm64 image on amd64 nodes. It pulled perfectly
 and then would not execute — "exec format error" reads like a corrupt image

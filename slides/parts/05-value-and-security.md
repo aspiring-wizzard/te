@@ -143,7 +143,7 @@ layout: default
 | 3 | MongoDB 5.0, EOL, unpatched | lifecycle check — **which I had to add** |
 | 2 | VM SA holds `roles/editor` | Checkov · Cloud Audit Logs |
 | 4 | Bucket grants `allUsers` | Checkov · log-based alert |
-| 1 | SSH `0.0.0.0/0` | Checkov — nothing watches its *use* |
+| 1 | SSH `0.0.0.0/0` | Checkov — but no host logs shipped, so nothing watches its *use* |
 
 Every tool owns one column. **None of them owns the chain.** {.punch}
 

@@ -41,7 +41,7 @@ layout: default
 # Wiz adds the edges, not more findings
 
 - **Security Graph** — resources, identities, exposure, RBAC *and* the repo, one model
-- **Toxic combination** — the chain becomes a query result, not a act of cleverness
+- **Toxic combination** — the chain becomes a query result, not an act of cleverness
 - **Agentless** — nothing installed on a host I already do not trust
 - **Code to cloud** — the fix ships as a **pull request against the IaC**
 
