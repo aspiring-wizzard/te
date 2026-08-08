@@ -164,7 +164,7 @@ jobs:
           category: trivy-fs
 
       - name: Publish SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-cyclonedx
           path: sbom.cdx.json
@@ -172,7 +172,7 @@ jobs:
 
       - name: Publish findings as artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appsec-findings-${{ github.sha }}
           path: |
