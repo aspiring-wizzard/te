@@ -85,7 +85,7 @@ jobs:
       contents: read
       security-events: write # upload SARIF
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: opentofu/setup-opentofu@v1
         with:
@@ -164,7 +164,7 @@ jobs:
       contents: read
       id-token: write # required for Workload Identity Federation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: google-github-actions/auth@v2
         with:
@@ -228,7 +228,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: google-github-actions/auth@v2
         with:
