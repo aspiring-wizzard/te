@@ -78,13 +78,13 @@ layout: two-cols-header
 
 ::right::
 
-### The honest gap
+### The honest gaps
 
-- Everything here reasons about **configuration**
-- It says the path is exploitable
-- It cannot say it *is being* exploited
+- **The VM has no SBOM** — only what is *declared* is checked
+- Everything here reasons about **configuration**, not behaviour
+- It says the path is exploitable; not that it *is being* exploited
 
-A detective control that has never fired is a hypothesis. {.punch}
+Agentless disk scanning closes the first. A runtime sensor closes the second. {.punch}
 
 <!--
 Tone: these are trade-offs made knowingly, not things I missed.

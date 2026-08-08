@@ -180,3 +180,35 @@ jobs:
             **/sbom.cdx.json
           if-no-files-found: ignore
           retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Lifecycle — a different question from every other job in these pipelines.
+  #
+  # The scanners above all ask "does this artefact contain a known
+  # vulnerability?". This one asks "will it ever receive another fix?". Those
+  # come apart: a component can be past end-of-life with zero known CVEs — clean
+  # from every vulnerability scanner, and no vendor left to issue an advisory
+  # when something is found tomorrow.
+  #
+  # It lives here rather than in iac.yml because it is a supply-chain question
+  # and spans both terraform/ and app/ — the same reason the SBOM lives here.
+  #
+  # It exists because the MongoDB VM was invisible to the entire pipeline: the
+  # image scan covers the application container, the SBOM stops at that
+  # container's edge, and Checkov reads Terraform for misconfiguration, not for
+  # unsupported versions.
+  # ---------------------------------------------------------------------------
+  lifecycle:
+    name: platform lifecycle (EOL)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # Soft by design, like the other scanners in this knowingly-vulnerable
+      # lab: all three pins ARE deliberately end-of-life, so failing the build
+      # would mean a permanently red pipeline. --strict is the production
+      # posture and is one flag away.
+      - name: Check pinned versions against vendor support
+        run: python3 scripts/check-eol.py

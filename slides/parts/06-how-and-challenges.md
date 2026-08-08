@@ -14,7 +14,7 @@ gitleaks · Semgrep · Trivy fs
 
 ### 2 · Build
 
-Trivy image · CycloneDX SBOM · Checkov
+Trivy image · CycloneDX SBOM · Checkov · **EOL check**
 
 ::right::
 

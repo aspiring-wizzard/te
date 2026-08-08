@@ -140,7 +140,7 @@ layout: default
 | — | Application code + dependencies | Semgrep · Trivy fs |
 | — | Internet-facing, unauthenticated | ZAP, on the running app |
 | 5 | Pod SA bound to `cluster-admin` | Gatekeeper — only for the *next* pod |
-| 3 | MongoDB 5.0, EOL, unpatched | **nothing in these pipelines** |
+| 3 | MongoDB 5.0, EOL, unpatched | lifecycle check — **which I had to add** |
 | 2 | VM SA holds `roles/editor` | Checkov · Cloud Audit Logs |
 | 4 | Bucket grants `allUsers` | Checkov · log-based alert |
 | 1 | SSH `0.0.0.0/0` | Checkov — nothing watches its *use* |
@@ -155,6 +155,9 @@ AppSec tooling owns the front of the chain. IaC scanning and cloud logging own
 the back. Not one of them can see the whole path — which is precisely the gap
 the Wiz slide fills.
 
-Row 3 is the one to dwell on, because it is the honest one: nothing in these
-pipelines catches an EOL datastore. That story is two slides away.
+Row 3 is the one to dwell on. Originally NOTHING here caught it, and the reason
+is structural: every scanner in these pipelines looks at either the app image or
+the IaC configuration, and the database is apt-installed onto a VM that none of
+them inspects. I added a lifecycle check to close it — that story is two slides
+away, and the residual gap is on the closing slide.
 -->

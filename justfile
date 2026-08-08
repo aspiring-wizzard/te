@@ -265,6 +265,14 @@ demo-public-bucket:
     @echo "── anonymous listing (no auth) ──"
     curl -s "https://storage.googleapis.com/storage/v1/b/wizex-backups-{{project}}/o" | head -30
 
+# Asks a different question from every scanner: not "is there a known
+# vulnerability" but "will this ever receive another fix". All three pins here
+# are deliberately past end of life.
+
+# Every pinned platform version, against vendor support dates
+demo-eol:
+    @python3 scripts/check-eol.py
+
 # The preventative control rejects a NEW privileged pod
 demo-prevent:
     -kubectl apply -f k8s/99-privileged-pod-DENYME.yaml

@@ -71,6 +71,51 @@ MongoError: Unsupported OP_QUERY command: find   (code 352)
 Patching cannot fix this. Only an application change can. {.punch}
 
 <!--
+[continues on the next slide — the second beat is that nothing caught it]
+-->
+
+---
+layout: default
+---
+
+# And nothing in my pipeline caught it
+
+Every scanner here reads the app image or the IaC config. The database is `apt-get install`-ed onto a VM that none of them inspects. {.lede}
+
+- **End of life is not a CVE** — clean today, unfixable tomorrow
+- So I added a **lifecycle check**: pins vs. vendor support dates
+- It catches all three — Mongo 5.0, Ubuntu 20.04, Node 16
+
+It sees what is **declared**. Not what is **installed**. {.punch}
+
+<!--
+This is the honest half of the previous slide, and it is worth volunteering
+because it is the obvious question: surely that is trivial to catch?
+
+It is — once you notice. The reason it went unnoticed is structural, not lazy.
+Trivy scans the application container. Trivy fs scans the npm tree. Checkov
+reads Terraform for MISCONFIGURATION, and no rule says "this string is an
+unsupported version". ZAP is black-box HTTP. The CycloneDX SBOM stops at the
+container's edge — so the VM has no SBOM at all. Every tool was pointed at
+something real; none of them was pointed at the datastore.
+
+The second point is the one I would defend hardest: EOL is a LIFECYCLE fact, not
+a vulnerability. A vulnerability feed can be entirely green on software that
+will never receive another fix. Catching it needs a lifecycle dataset —
+endoflife.date here — not a CVE database. Worth adding: mongodb-org comes from
+MongoDB's own apt repo rather than Ubuntu's security tracker, so CVE matching is
+weaker for it than for distro packages. The lifecycle signal is the more
+dependable one.
+
+Then the limit, and it is the hand-off to agentless: the check reads pins out of
+source. It cannot see a package a startup script pulled in transitively, or
+drift between the pin and the running host. Closing that means an SBOM of the VM
+itself — disk scanning, no agent on a host I already do not trust.
+
+Demo it live if there is time: `just demo-eol`.
+-->
+
+<!--
 This is the best AppSec story in the build, because it inverts the usual framing.
 "Upgrade your database" is a platform ticket. Here the platform CANNOT act: the
 version is pinned by an application dependency nobody has touched since 2016.
